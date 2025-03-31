@@ -7,7 +7,7 @@ export type Annotation = {
   image?: string;
   label: string;
   confidence?: number;
-  bbox?: [number, number, number, number]; // [x1, y1, x2, y2] format
+  bbox?: [number, number, number, number];
 };
 
 export type PredictionResult = {
@@ -54,52 +54,54 @@ export class MangaModelClient {
   }
 
   async predict(
-    imageBlob: Blob | string,
+    imageData: string | Blob,
     modelName = "v2023.12.07_n_yv11",
     iouThreshold = 0.7,
     scoreThreshold = 0.25,
-    allowDynamic = true
+    allowDynamic = false
   ): Promise<PredictionResult> {
     try {
       const client = await this.connect();
       
-      // Handle both blob and string input
-      const imageInput = typeof imageBlob === 'string' ? imageBlob : imageBlob;
+      // If imageData is a string (URL or data URL), convert to Blob
+      let imageBlob: Blob;
+      if (typeof imageData === 'string') {
+        if (imageData.startsWith('data:')) {
+          imageBlob = MangaModelClient.dataURLToBlob(imageData);
+        } else {
+          imageBlob = await MangaModelClient.fetchImageBlob(imageData);
+        }
+      } else {
+        imageBlob = imageData;
+      }
       
-      console.log(`Calling Manga109 YOLO API with model ${modelName}`);
-      
-      const result = await client.predict(this.apiName, {
-        image: imageInput,
-        model_name: modelName,
-        iou_threshold: iouThreshold,
-        score_threshold: scoreThreshold,
-        allow_dynamic: allowDynamic
-      });
+      const result = await client.predict(this.apiName, [
+        { data: imageBlob },
+        modelName,
+        iouThreshold,
+        scoreThreshold,
+        allowDynamic
+      ]);
 
-      // Parse the result data
-      const data = result.data as any;
-      const predictionResult: PredictionResult = {
-        annotations: data.annotations || []
-      };
-      
-      this.options?.onResult?.(predictionResult);
+      const data = this.parseResult(result);
+      this.options?.onResult?.(data);
 
       // Save to Supabase if meta provided
       if (this.options?.meta) {
-        try {
-          await storePrediction(this.options.meta.imageUrl, {
+        const imageUrl = this.options.meta.imageUrl;
+        await storePrediction(
+          imageUrl,
+          {
             model_name: modelName,
             iou_threshold: iouThreshold,
             score_threshold: scoreThreshold,
             allow_dynamic: allowDynamic
-          }, predictionResult);
-        } catch (storageError) {
-          console.error("Failed to store prediction:", storageError);
-          // Continue execution even if storage fails
-        }
+          },
+          data
+        );
       }
 
-      return predictionResult;
+      return data;
     } catch (error) {
       console.error("Prediction error:", error);
       this.options?.onError?.(error);
@@ -107,9 +109,45 @@ export class MangaModelClient {
     }
   }
 
+  private parseResult(result: any): PredictionResult {
+    try {
+      // Handle different result formats that might come from the API
+      if (result.data && Array.isArray(result.data)) {
+        // Format: { data: [ { annotations: [...] } ] }
+        if (result.data[0] && result.data[0].annotations) {
+          return {
+            annotations: result.data[0].annotations || []
+          };
+        }
+        
+        // Format: { data: [...] } where data is an array of annotations
+        return {
+          annotations: result.data || []
+        };
+      }
+      
+      // If it's already in the expected format
+      if (result.annotations) {
+        return result;
+      }
+      
+      console.warn('Unexpected result format:', result);
+      return { annotations: [] };
+    } catch (err) {
+      console.error('Error parsing result:', err);
+      return { annotations: [] };
+    }
+  }
+
+  displayAnnotations(annotations: Annotation[]): void {
+    annotations.forEach((ann) => {
+      console.log(`Label: ${ann.label} | Confidence: ${ann.confidence}`);
+    });
+  }
+
   static async fetchImageBlob(url: string): Promise<Blob> {
     const response = await fetch(url);
-    if (!response.ok) throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+    if (!response.ok) throw new Error("Failed to fetch image blob");
     return await response.blob();
   }
 
@@ -118,39 +156,17 @@ export class MangaModelClient {
     if (parts.length !== 2) {
       throw new Error('Invalid data URL format');
     }
-    
+
     const contentType = parts[0].split(':')[1];
-    const raw = window.atob(parts[1]);
+    const raw = atob(parts[1]);
     const rawLength = raw.length;
     const uInt8Array = new Uint8Array(rawLength);
-    
+
     for (let i = 0; i < rawLength; ++i) {
       uInt8Array[i] = raw.charCodeAt(i);
     }
-    
+
     return new Blob([uInt8Array], { type: contentType });
-  }
-  
-  /**
-   * Convert annotations to PanelLabel format used in the application
-   */
-  static convertToPanelLabels(result: PredictionResult): any[] {
-    if (!result || !result.annotations) return [];
-    
-    return result.annotations.map(annotation => {
-      // Extract coordinates from bbox [x1, y1, x2, y2] format
-      const [x1, y1, x2, y2] = annotation.bbox || [0, 0, 0, 0];
-      
-      // Convert to app's format (x, y, width, height)
-      return {
-        label: annotation.label,
-        confidence: annotation.confidence,
-        x: x1,
-        y: y1,
-        width: x2 - x1,
-        height: y2 - y1
-      };
-    });
   }
 }
 
@@ -159,31 +175,32 @@ export function useMangaClient(spaceName = "jensin-manga109-yolo") {
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [client] = useState(() => new MangaModelClient(spaceName, {
-    onResult: (data) => setResult(data),
-    onError: (err) => setError(err)
-  }));
 
-  const predict = async (imageBlob: Blob | string, 
-    modelName = "v2023.12.07_n_yv11", 
-    iouThreshold = 0.7, 
-    scoreThreshold = 0.25, 
-    allowDynamic = true,
-    meta?: MangaModelClientOptions["meta"]) => {
-    
+  const clientRef = useRef<MangaModelClient | null>(null);
+
+  useEffect(() => {
+    clientRef.current = new MangaModelClient(spaceName, {
+      onResult: (data) => setResult(data),
+      onError: (err) => setError(err)
+    });
+  }, [spaceName]);
+
+  const predict = async (imageData: string | Blob, meta?: MangaModelClientOptions["meta"]) => {
+    if (!clientRef.current) return null;
     setLoading(true);
     setError(null);
     
     try {
-      const predictionResult = await client.predict(
-        imageBlob, 
-        modelName, 
-        iouThreshold, 
-        scoreThreshold, 
-        allowDynamic
-      );
-      setResult(predictionResult);
-      return predictionResult;
+      if (meta) {
+        clientRef.current = new MangaModelClient(spaceName, {
+          onResult: (data) => setResult(data),
+          onError: (err) => setError(err),
+          meta
+        });
+      }
+      
+      const result = await clientRef.current.predict(imageData);
+      return result;
     } catch (err) {
       setError(err);
       throw err;
@@ -192,5 +209,5 @@ export function useMangaClient(spaceName = "jensin-manga109-yolo") {
     }
   };
 
-  return { predict, result, error, loading, client };
+  return { predict, result, error, loading };
 }

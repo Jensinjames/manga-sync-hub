@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      annotations: {
+        Row: {
+          bbox: number[] | null
+          confidence: number | null
+          created_at: string
+          id: string
+          label: string
+          prediction_id: string
+        }
+        Insert: {
+          bbox?: number[] | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          label: string
+          prediction_id: string
+        }
+        Update: {
+          bbox?: number[] | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          label?: string
+          prediction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annotations_prediction_id_fkey"
+            columns: ["prediction_id"]
+            isOneToOne: false
+            referencedRelation: "predictions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           changed_at: string | null
@@ -116,6 +151,36 @@ export type Database = {
           panel_id?: string
           scene_type?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      predictions: {
+        Row: {
+          allow_dynamic: boolean
+          created_at: string
+          id: string
+          image_url: string
+          iou_threshold: number
+          model_name: string
+          score_threshold: number
+        }
+        Insert: {
+          allow_dynamic?: boolean
+          created_at?: string
+          id?: string
+          image_url: string
+          iou_threshold?: number
+          model_name: string
+          score_threshold?: number
+        }
+        Update: {
+          allow_dynamic?: boolean
+          created_at?: string
+          id?: string
+          image_url?: string
+          iou_threshold?: number
+          model_name?: string
+          score_threshold?: number
         }
         Relationships: []
       }
