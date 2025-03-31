@@ -2,7 +2,12 @@
 import { PipelinePanel } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { convertToMetadata } from './types/panelMetadataTypes';
+import { 
+  convertToMetadata, 
+  convertLabelsForPipeline,
+  errorHasLength,
+  getErrorString
+} from './types/panelMetadataTypes';
 import { updatePanelWithProcessingStatus } from './utils/panelProcessingUtils';
 import { callProcessPanelFunction } from './api/panelEdgeFunctionClient';
 import { pollProcessingStatus } from './polling/pollProcessingStatus';
@@ -42,6 +47,9 @@ export const processPanel = async (
     // Convert and validate the result data
     const result = convertToMetadata(data.result);
     
+    // Convert labels to the format expected by the pipeline
+    const pipelineLabels = convertLabelsForPipeline(result);
+    
     // Update the panel with the initial processing status
     const resultPanels = [...selectedPanels];
     resultPanels[panelIndex] = {
@@ -56,7 +64,7 @@ export const processPanel = async (
       actionLevel: result.action_level,
       lastProcessedAt: result.processed_at,
       // Set debug overlay if we have labels
-      debugOverlay: result.labels
+      debugOverlay: pipelineLabels
     };
     setSelectedPanels(resultPanels);
     

@@ -3,7 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { PipelinePanel } from '../../types';
 import { toast } from 'sonner';
 import { sleep } from '../utils/panelProcessingUtils';
-import { convertToMetadata } from '../types/panelMetadataTypes';
+import { 
+  convertToMetadata, 
+  convertLabelsForPipeline,
+  errorHasLength,
+  getErrorString
+} from '../types/panelMetadataTypes';
 import { getPanelMetadata } from '../api/panelEdgeFunctionClient';
 
 // Poll for processing status until complete
@@ -41,13 +46,16 @@ export const pollProcessingStatus = async (
       if (metadata.processing !== true) {
         isProcessing = false;
         
+        // Convert labels to the format expected by the pipeline
+        const pipelineLabels = convertLabelsForPipeline(metadata);
+        
         // Update the panel with the results
         const updatedPanels = [...currentPanels];
         updatedPanels[panelIndex] = {
           ...updatedPanels[panelIndex],
           isProcessing: false,
-          isError: Boolean(metadata.error && metadata.error.length > 0),
-          status: metadata.error && metadata.error.length > 0 ? 'error' : 'done',
+          isError: errorHasLength(metadata.error),
+          status: errorHasLength(metadata.error) ? 'error' : 'done',
           metadata: metadata,
           content: metadata.content,
           sceneType: metadata.scene_type,
@@ -55,14 +63,14 @@ export const pollProcessingStatus = async (
           mood: metadata.mood,
           actionLevel: metadata.action_level,
           lastProcessedAt: metadata.processed_at,
-          debugOverlay: metadata.labels,
-          errorMessage: metadata.error
+          debugOverlay: pipelineLabels,
+          errorMessage: getErrorString(metadata.error)
         };
         setSelectedPanels(updatedPanels);
         
         // Show appropriate toast
-        if (metadata.error && metadata.error.length > 0) {
-          toast.error(`Processing failed: ${metadata.error}`);
+        if (errorHasLength(metadata.error)) {
+          toast.error(`Processing failed: ${getErrorString(metadata.error)}`);
         } else {
           toast.success('Panel processing completed');
         }

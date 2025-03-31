@@ -1,5 +1,6 @@
 
 import { Json } from '@/integrations/supabase/types';
+import { PanelLabel } from '@/contexts/pipeline/types';
 
 // Define the structure of a panel metadata record as returned from the database
 export interface PanelMetadataRecord {
@@ -134,15 +135,15 @@ export const convertToMetadata = (data: any): PanelMetadata => {
   }
   
   // Handle error information
-  if (data.error) {
+  if (data.error !== undefined) {
     metadata.error = data.error;
   }
   
   // Map simple string and number properties
-  const stringProps = ['content', 'scene_type', 'mood', 'action_level', 'processed_at', 'imageHash'];
+  const stringProps = ['content', 'scene_type', 'mood', 'action_level', 'processed_at', 'imageHash'] as const;
   stringProps.forEach(prop => {
     if (data[prop] !== undefined) {
-      metadata[prop as keyof PanelMetadata] = data[prop];
+      metadata[prop] = data[prop];
     }
   });
   
@@ -152,4 +153,34 @@ export const convertToMetadata = (data: any): PanelMetadata => {
   }
   
   return metadata;
+};
+
+// Convert the PanelMetadata labels to PanelLabel format for pipeline usage
+export const convertLabelsForPipeline = (metadata: PanelMetadata): PanelLabel[] | undefined => {
+  if (!metadata.labels) return undefined;
+  
+  return metadata.labels.map(label => ({
+    label: label.class,
+    confidence: label.confidence,
+    x: label.x1,
+    y: label.y1,
+    width: label.x2 - label.x1,
+    height: label.y2 - label.y1
+  }));
+};
+
+// Helper to check if an error value has a string representation with length
+export const errorHasLength = (error: string | { message: string; code: string; details?: any; } | undefined): boolean => {
+  if (!error) return false;
+  if (typeof error === 'string') return error.length > 0;
+  if (typeof error === 'object' && error.message) return error.message.length > 0;
+  return false;
+};
+
+// Helper to get error as string regardless of format
+export const getErrorString = (error: string | { message: string; code: string; details?: any; } | undefined): string => {
+  if (!error) return '';
+  if (typeof error === 'string') return error;
+  if (typeof error === 'object' && error.message) return error.message;
+  return 'Unknown error';
 };
