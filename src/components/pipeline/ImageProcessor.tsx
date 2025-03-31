@@ -1,8 +1,7 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, Wand2, AlertCircle, Eye, EyeOff, Rotate } from 'lucide-react';
+import { Loader2, Wand2, AlertCircle, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import { usePipeline } from '@/contexts/PipelineContext';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
@@ -16,7 +15,6 @@ export const ImageProcessor: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Function to process a single panel
   const handleProcessSingle = async (panel: any, event?: React.MouseEvent) => {
     if (event) {
       event.stopPropagation();
@@ -26,7 +24,6 @@ export const ImageProcessor: React.FC = () => {
     updateElementVisibility();
   };
 
-  // Process all images at once
   const handleProcessAll = async () => {
     if (selectedPanels.length === 0) {
       toast.error("No images to process");
@@ -39,7 +36,6 @@ export const ImageProcessor: React.FC = () => {
     let successCount = 0;
     for (let i = 0; i < selectedPanels.length; i++) {
       const panel = selectedPanels[i];
-      // Skip already processed panels unless they have errors
       if (panel.status === 'done' && !panel.isError) {
         successCount++;
         setProgress(Math.round(((i + 1) / selectedPanels.length) * 100));
@@ -74,28 +70,22 @@ export const ImageProcessor: React.FC = () => {
     const newDebugMode = !debugMode;
     setDebugMode(newDebugMode);
     
-    // Save to localStorage to persist the setting
     localStorage.setItem('debugMode', newDebugMode ? 'true' : 'false');
     
-    // Update visibility of debug overlays
     updateElementVisibility();
   };
   
   const updateElementVisibility = () => {
-    // Force a re-render by updating the selected panels state
     setSelectedPanels(prevPanels => [...prevPanels]);
   };
 
-  // Process panel with better status tracking
   const processPanel = async (panelId: string) => {
     const panel = selectedPanels.find(p => p.id === panelId);
     if (!panel) return;
     
-    // Find the panel in the selected panels
     const panelIndex = selectedPanels.findIndex(p => p.id === panelId);
     if (panelIndex === -1) return;
     
-    // Mark the panel as processing
     const updatedPanels = [...selectedPanels];
     updatedPanels[panelIndex] = { 
       ...updatedPanels[panelIndex], 
@@ -106,7 +96,6 @@ export const ImageProcessor: React.FC = () => {
     setSelectedPanels(updatedPanels);
 
     try {
-      // Call the Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('process-panel', {
         body: {
           panelId,
@@ -116,7 +105,6 @@ export const ImageProcessor: React.FC = () => {
 
       if (error) throw error;
 
-      // Update the panel with the results
       const resultPanels = [...selectedPanels];
       resultPanels[panelIndex] = {
         ...resultPanels[panelIndex],
@@ -137,7 +125,6 @@ export const ImageProcessor: React.FC = () => {
     } catch (error) {
       console.error("Error processing panel:", error);
       
-      // Mark the panel as having an error
       const errorPanels = [...selectedPanels];
       errorPanels[panelIndex] = {
         ...errorPanels[panelIndex],
@@ -148,7 +135,6 @@ export const ImageProcessor: React.FC = () => {
       };
       setSelectedPanels(errorPanels);
       
-      // Show a toast with the error
       toast.error(`Failed to process panel: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return null;
     }
@@ -222,16 +208,14 @@ export const ImageProcessor: React.FC = () => {
                     className="w-full h-full object-cover"
                   />
                   
-                  {/* Debug overlay for bounding boxes */}
                   {debugMode && panel.debugOverlay && panel.debugOverlay.length > 0 && (
                     <DebugOverlay 
                       labels={panel.debugOverlay} 
-                      width={300}  // These will be ignored as we use percentages
-                      height={200} // These will be ignored as we use percentages
+                      width={300} 
+                      height={200}
                     />
                   )}
                   
-                  {/* Processing overlay */}
                   {panel.isProcessing && (
                     <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center">
                       <Loader2 className="h-8 w-8 text-white animate-spin mb-2" />
@@ -239,7 +223,6 @@ export const ImageProcessor: React.FC = () => {
                     </div>
                   )}
                   
-                  {/* Error overlay */}
                   {panel.isError && (
                     <div className="absolute inset-0 bg-red-900/70 flex flex-col items-center justify-center">
                       <AlertCircle className="h-8 w-8 text-white mb-2" />
@@ -268,7 +251,7 @@ export const ImageProcessor: React.FC = () => {
                       <Loader2 size={14} className="animate-spin" />
                     ) : panel.isError ? (
                       <>
-                        <Rotate size={14} /> Retry
+                        <RotateCcw size={14} /> Retry
                       </>
                     ) : panel.status === 'done' ? (
                       'Reprocess'
@@ -292,5 +275,4 @@ export const ImageProcessor: React.FC = () => {
   );
 };
 
-// Import supabase client
 import { supabase } from '@/integrations/supabase/client';
