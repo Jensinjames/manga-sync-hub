@@ -2,7 +2,7 @@
 import { PipelinePanel } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { isMetadataObject } from './types/panelMetadataTypes';
+import { convertToMetadata } from './types/panelMetadataTypes';
 import { updatePanelWithProcessingStatus } from './utils/panelProcessingUtils';
 import { callProcessPanelFunction } from './api/panelEdgeFunctionClient';
 import { pollProcessingStatus } from './polling/pollProcessingStatus';
@@ -39,11 +39,8 @@ export const processPanel = async (
     
     if (!data || !data.result) throw new Error('Invalid response from edge function');
     
-    // Safely type check the result data
-    const result = data.result;
-    if (!isMetadataObject(result)) {
-      throw new Error('Invalid metadata format from edge function');
-    }
+    // Convert and validate the result data
+    const result = convertToMetadata(data.result);
     
     // Update the panel with the initial processing status
     const resultPanels = [...selectedPanels];
@@ -52,14 +49,14 @@ export const processPanel = async (
       isProcessing: result.processing === true,
       status: result.processing === true ? 'processing' : 'done',
       metadata: result,
-      content: typeof result.content === 'string' ? result.content : undefined,
-      sceneType: typeof result.scene_type === 'string' ? result.scene_type : undefined,
-      characterCount: typeof result.character_count === 'number' ? result.character_count : undefined,
-      mood: typeof result.mood === 'string' ? result.mood : undefined,
-      actionLevel: typeof result.action_level === 'string' ? result.action_level : undefined,
-      lastProcessedAt: typeof result.processed_at === 'string' ? result.processed_at : undefined,
+      content: result.content,
+      sceneType: result.scene_type,
+      characterCount: result.character_count,
+      mood: result.mood,
+      actionLevel: result.action_level,
+      lastProcessedAt: result.processed_at,
       // Set debug overlay if we have labels
-      debugOverlay: Array.isArray(result.labels) ? result.labels : undefined
+      debugOverlay: result.labels
     };
     setSelectedPanels(resultPanels);
     

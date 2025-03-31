@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { PipelinePanel } from '../../types';
 import { toast } from 'sonner';
 import { sleep } from '../utils/panelProcessingUtils';
-import { isMetadataObject } from '../types/panelMetadataTypes';
+import { convertToMetadata } from '../types/panelMetadataTypes';
 
 // Poll for processing status until complete
 export const pollProcessingStatus = async (
@@ -37,14 +37,17 @@ export const pollProcessingStatus = async (
         continue;
       }
       
-      // Check if metadata exists and is an object
-      if (!data?.metadata || !isMetadataObject(data.metadata)) {
+      // Check if metadata exists
+      if (!data?.metadata) {
         retryCount++;
         continue;
       }
       
+      // Convert the metadata to a strongly typed object
+      const metadata = convertToMetadata(data.metadata);
+      
       // Check if processing is complete
-      if (data.metadata.processing !== true) {
+      if (metadata.processing !== true) {
         isProcessing = false;
         
         // Update the panel with the results
@@ -52,23 +55,23 @@ export const pollProcessingStatus = async (
         updatedPanels[panelIndex] = {
           ...updatedPanels[panelIndex],
           isProcessing: false,
-          isError: typeof data.metadata.error === 'string' && data.metadata.error.length > 0,
-          status: typeof data.metadata.error === 'string' && data.metadata.error.length > 0 ? 'error' : 'done',
-          metadata: data.metadata,
-          content: typeof data.metadata.content === 'string' ? data.metadata.content : undefined,
-          sceneType: typeof data.metadata.scene_type === 'string' ? data.metadata.scene_type : undefined,
-          characterCount: typeof data.metadata.character_count === 'number' ? data.metadata.character_count : undefined,
-          mood: typeof data.metadata.mood === 'string' ? data.metadata.mood : undefined,
-          actionLevel: typeof data.metadata.action_level === 'string' ? data.metadata.action_level : undefined,
-          lastProcessedAt: typeof data.metadata.processed_at === 'string' ? data.metadata.processed_at : undefined,
-          debugOverlay: Array.isArray(data.metadata.labels) ? data.metadata.labels : undefined,
-          errorMessage: typeof data.metadata.error === 'string' ? data.metadata.error : undefined
+          isError: Boolean(metadata.error && metadata.error.length > 0),
+          status: metadata.error && metadata.error.length > 0 ? 'error' : 'done',
+          metadata: metadata,
+          content: metadata.content,
+          sceneType: metadata.scene_type,
+          characterCount: metadata.character_count,
+          mood: metadata.mood,
+          actionLevel: metadata.action_level,
+          lastProcessedAt: metadata.processed_at,
+          debugOverlay: metadata.labels,
+          errorMessage: metadata.error
         };
         setSelectedPanels(updatedPanels);
         
         // Show appropriate toast
-        if (typeof data.metadata.error === 'string' && data.metadata.error.length > 0) {
-          toast.error(`Processing failed: ${data.metadata.error}`);
+        if (metadata.error && metadata.error.length > 0) {
+          toast.error(`Processing failed: ${metadata.error}`);
         } else {
           toast.success('Panel processing completed');
         }
