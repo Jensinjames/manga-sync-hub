@@ -57,7 +57,12 @@ export const exportProjectToJSON = (project: ProjectData): void => {
 };
 
 // PDF export utility
-export const exportProjectToPDF = async (project: ProjectData): Promise<void> => {
+export const exportProjectToPDF = async (
+  project: ProjectData, 
+  options: { includeNotes?: boolean; includeThumbnails?: boolean } = {}
+): Promise<void> => {
+  const { includeNotes = true, includeThumbnails = true } = options;
+  
   try {
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
@@ -89,6 +94,7 @@ export const exportProjectToPDF = async (project: ProjectData): Promise<void> =>
     for (let i = 0; i < allPanels.length; i++) {
       const panel = allPanels[i];
       
+      // Check if we need a new page
       if (yPosition > 250) {
         doc.addPage();
         yPosition = 20;
@@ -99,22 +105,64 @@ export const exportProjectToPDF = async (project: ProjectData): Promise<void> =>
       doc.text(`Panel ${i + 1} - ${panel.timeCode}`, 10, yPosition);
       yPosition += 10;
       
-      // Add panel notes
-      doc.setFontSize(10);
-      if (panel.notes.camera) {
-        doc.text(`Camera: ${panel.notes.camera}`, 15, yPosition);
-        yPosition += 5;
-      }
-      if (panel.notes.fx) {
-        doc.text(`FX: ${panel.notes.fx}`, 15, yPosition);
-        yPosition += 5;
-      }
-      if (panel.notes.audio) {
-        doc.text(`Audio: ${panel.notes.audio}`, 15, yPosition);
-        yPosition += 5;
+      // Add panel image if it exists and includeThumbnails is true
+      if (panel.imageUrl && includeThumbnails) {
+        try {
+          // Create a temporary canvas to load and resize the image
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          
+          // Create an image element to load the image
+          const img = new Image();
+          img.src = panel.imageUrl;
+          
+          // Wait for the image to load
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+          
+          // Set canvas dimensions to keep aspect ratio but fit within PDF
+          const MAX_WIDTH = 180; // max width for the image in the PDF
+          const imgRatio = img.width / img.height;
+          let imgWidth = MAX_WIDTH;
+          let imgHeight = imgWidth / imgRatio;
+          
+          // Set canvas size and draw image
+          canvas.width = imgWidth;
+          canvas.height = imgHeight;
+          context?.drawImage(img, 0, 0, imgWidth, imgHeight);
+          
+          // Add the image to the PDF
+          const imgData = canvas.toDataURL('image/jpeg', 0.75);
+          doc.addImage(imgData, 'JPEG', 15, yPosition, imgWidth, imgHeight);
+          
+          // Update y position based on image height
+          yPosition += imgHeight + 10;
+        } catch (error) {
+          console.error('Error adding image to PDF:', error);
+          yPosition += 5; // Still advance position even if image fails
+        }
       }
       
-      yPosition += 10;
+      // Add panel notes if includeNotes is true
+      if (includeNotes) {
+        doc.setFontSize(10);
+        if (panel.notes.camera) {
+          doc.text(`Camera: ${panel.notes.camera}`, 15, yPosition);
+          yPosition += 5;
+        }
+        if (panel.notes.fx) {
+          doc.text(`FX: ${panel.notes.fx}`, 15, yPosition);
+          yPosition += 5;
+        }
+        if (panel.notes.audio) {
+          doc.text(`Audio: ${panel.notes.audio}`, 15, yPosition);
+          yPosition += 5;
+        }
+      }
+      
+      yPosition += 15; // Add spacing between panels
     }
     
     // Save the PDF

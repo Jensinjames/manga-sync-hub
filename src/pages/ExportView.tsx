@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useProject } from '@/contexts/ProjectContext';
 import { Button } from '@/components/ui/button';
@@ -24,15 +23,20 @@ const ExportView = () => {
     0
   );
 
-  // Handle exporting with options (for future implementation)
+  // Handle exporting with options
   const handleExportJSON = () => {
     exportProject();
     toast.success('Project exported as JSON');
   };
 
   const handleExportPDF = async () => {
-    await exportToPDF();
-    toast.success('Project exported as PDF');
+    try {
+      // Pass the options to the exportToPDF function by extending the context
+      await exportToPDF({ includeNotes, includeThumbnails });
+      toast.success('Project exported as PDF');
+    } catch (error) {
+      toast.error('Failed to export PDF');
+    }
   };
 
   return (

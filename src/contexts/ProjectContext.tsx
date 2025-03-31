@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { ProjectData, MangaPage, MangaPanel } from '@/types/manga';
 import { toast } from 'sonner';
@@ -19,6 +18,11 @@ import {
   selectPanel as selectPanelUtil
 } from '@/utils/panelOperations';
 
+interface ExportOptions {
+  includeNotes?: boolean;
+  includeThumbnails?: boolean;
+}
+
 interface ProjectContextType {
   project: ProjectData;
   selectedPage: MangaPage | null;
@@ -32,7 +36,7 @@ interface ProjectContextType {
   addPanelToPage: (pageId: string, panelData: { imageUrl: string, position?: MangaPanel['position'] }) => void;
   importProject: (file: File) => Promise<void>;
   exportProject: () => void;
-  exportToPDF: () => Promise<void>;
+  exportToPDF: (options?: ExportOptions) => Promise<void>;
   resetProject: () => void;
   autoSave: () => void;
 }
@@ -59,7 +63,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     
   const selectedPanel = selectedPage?.panels.find(panel => panel.id === project.selectedPanelId) || null;
 
-  // Set up autosave every 2 minutes
   useEffect(() => {
     const intervalId = setInterval(() => {
       autoSave();
@@ -75,7 +78,6 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
     setProjectState(projectWithTimestamp);
     
-    // Auto-save to localStorage
     saveProjectToLocalStorage(projectWithTimestamp);
   };
 
@@ -135,9 +137,9 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
-  const exportToPDF = async (): Promise<void> => {
+  const exportToPDF = async (options: ExportOptions = {}): Promise<void> => {
     try {
-      await exportProjectToPDF(project);
+      await exportProjectToPDF(project, options);
       toast.success('PDF exported successfully');
     } catch (error) {
       toast.error('Failed to export to PDF');
