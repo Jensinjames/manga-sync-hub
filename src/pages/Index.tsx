@@ -1,7 +1,5 @@
 
 import React from 'react';
-import { ProjectProvider } from '@/contexts/ProjectContext';
-import { MobileProvider } from '@/contexts/MobileContext';
 import { Header } from '@/components/Header';
 import { MangaPagesList } from '@/components/MangaPagesList';
 import { PanelWorkspace } from '@/components/PanelWorkspace';
@@ -84,14 +82,10 @@ const ResponsiveLayout: React.FC = () => {
 
 const Index = () => {
   return (
-    <ProjectProvider>
-      <MobileProvider>
-        <div className="min-h-screen flex flex-col bg-manga-darker text-white">
-          <Header />
-          <ResponsiveLayout />
-        </div>
-      </MobileProvider>
-    </ProjectProvider>
+    <div className="min-h-screen flex flex-col bg-manga-darker text-white">
+      <Header />
+      <ResponsiveLayout />
+    </div>
   );
 };
 
