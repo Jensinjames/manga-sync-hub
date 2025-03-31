@@ -1,33 +1,29 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useProject } from '@/contexts/ProjectContext';
-import { 
-  Upload, 
-  Eye, 
-  Download, 
-  RotateCcw, 
-  Save, 
-  FileText
-} from 'lucide-react';
+import { Upload, Eye, Download, RotateCcw, Save, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-
 export const Header = () => {
-  const { project, setProject, importProject, exportProject, exportToPDF, resetProject, autoSave } = useProject();
+  const {
+    project,
+    setProject,
+    importProject,
+    exportProject,
+    exportToPDF,
+    resetProject,
+    autoSave
+  } = useProject();
   const [projectName, setProjectName] = useState(project.name);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
   const handleImportClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-
   const handleImportChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     try {
       await importProject(file);
     } catch (error) {
@@ -40,11 +36,9 @@ export const Header = () => {
       }
     }
   };
-
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProjectName(e.target.value);
   };
-
   const handleNameBlur = () => {
     if (projectName !== project.name) {
       setProject({
@@ -54,41 +48,24 @@ export const Header = () => {
       toast.success('Project name updated');
     }
   };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.currentTarget.blur();
     }
   };
-
   const handleManualSave = () => {
     autoSave();
   };
-  
   const handleExportPDF = () => {
     exportToPDF();
   };
-
-  return (
-    <header className="bg-manga-dark border-b border-manga-darker px-6 py-4 flex justify-between items-center">
+  return <header className="bg-manga-dark border-b border-manga-darker px-6 py-4 flex justify-between items-center">
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold text-white">MangaSync Solo</h1>
-        <Input
-          value={projectName}
-          onChange={handleNameChange}
-          onBlur={handleNameBlur}
-          onKeyDown={handleKeyDown}
-          className="max-w-[240px] bg-manga-darker text-white border-manga-darker focus:border-manga-primary"
-        />
+        <Input value={projectName} onChange={handleNameChange} onBlur={handleNameBlur} onKeyDown={handleKeyDown} className="max-w-[240px] bg-manga-darker text-white border-manga-darker focus:border-manga-primary" />
       </div>
-      <div className="flex gap-3">
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleImportChange}
-          accept=".json"
-          className="hidden"
-        />
+      <div className="flex gap-3 bg-slate-900">
+        <input type="file" ref={fileInputRef} onChange={handleImportChange} accept=".json" className="hidden" />
         <Button variant="outline" onClick={handleManualSave}>
           <Save className="mr-2 h-4 w-4" /> Save
         </Button>
@@ -108,6 +85,5 @@ export const Header = () => {
           <RotateCcw className="mr-2 h-4 w-4" /> Reset
         </Button>
       </div>
-    </header>
-  );
+    </header>;
 };
