@@ -1,5 +1,5 @@
 
-import { Client } from "@gradio/client";
+import { client as gradioClient } from "@gradio/client";
 import { PanelLabel } from "@/contexts/pipeline/types";
 
 export type MangaVisionAnnotation = {
@@ -34,10 +34,10 @@ export const DEFAULT_CONFIG: MangaVisionConfig = {
  * This can be used for direct client-side processing when debugging or in development
  */
 export class MangaVisionClient {
-  private client: Client | null = null;
+  private client: any = null;
   private readonly apiEndpoint = "/_gr_detect";
   private config: MangaVisionConfig;
-  private connectionPromise: Promise<Client> | null = null;
+  private connectionPromise: Promise<any> | null = null;
 
   constructor(config: Partial<MangaVisionConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -46,13 +46,13 @@ export class MangaVisionClient {
   /**
    * Connect to the HuggingFace Space
    */
-  async connect(): Promise<Client> {
+  async connect(): Promise<any> {
     if (this.client) return this.client;
     
     if (!this.connectionPromise) {
       try {
-        // Using the proper Client.connect method from @gradio/client
-        this.connectionPromise = Client.connect(this.config.spaceName).then(client => {
+        // Use the correct import from @gradio/client
+        this.connectionPromise = gradioClient(this.config.spaceName, {}).then(client => {
           this.client = client;
           return client;
         });
