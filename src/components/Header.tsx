@@ -31,10 +31,8 @@ export const Header = () => {
     try {
       await importProject(file);
     } catch (error) {
-      toast({
-        title: "Import failed",
-        description: "Could not import the project file.",
-        variant: "destructive",
+      toast.error("Import failed", {
+        description: "Could not import the project file."
       });
     } finally {
       if (fileInputRef.current) {
