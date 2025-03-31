@@ -18,6 +18,14 @@ export const useImageProcessor = () => {
   const [progress, setProgress] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Clean up any resources when the component unmounts
+  useEffect(() => {
+    return () => {
+      // Release references to help with garbage collection
+      containerRef.current = null;
+    };
+  }, []);
+
   const handleProcessSingle = async (panel: PipelinePanel, event?: React.MouseEvent) => {
     if (event) {
       event.stopPropagation();
