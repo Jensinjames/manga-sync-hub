@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageUploader } from './ImageUploader';
 import { ImageProcessor } from './ImageProcessor';
@@ -7,7 +7,6 @@ import { NarrationEditor } from './NarrationEditor';
 import { AudioPreview } from './AudioPreview';
 import { ExportOptions } from './ExportOptions';
 import { Card } from '@/components/ui/card';
-import { useProject } from '@/contexts/ProjectContext';
 
 export const AIContentPipeline = () => {
   return (

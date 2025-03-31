@@ -1,6 +1,7 @@
 
 import React, { lazy, Suspense } from 'react';
 import { Header } from '@/components/Header';
+import { PipelineProvider } from '@/contexts/PipelineContext';
 
 // Use lazy loading for the AIContentPipeline component
 const AIContentPipeline = lazy(() => import('@/components/pipeline/AIContentPipeline').then(
@@ -17,7 +18,9 @@ const Index = () => {
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-manga-primary"></div>
           </div>
         }>
-          <AIContentPipeline />
+          <PipelineProvider>
+            <AIContentPipeline />
+          </PipelineProvider>
         </Suspense>
       </main>
     </div>

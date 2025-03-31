@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProjectProvider } from "@/contexts/ProjectContext";
 import { MobileProvider } from "@/contexts/MobileContext";
-import { PipelineProvider } from "@/contexts/PipelineContext";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import ExportView from "./pages/ExportView";
@@ -23,16 +22,14 @@ const App = () => {
         <Sonner />
         <ProjectProvider>
           <MobileProvider>
-            <PipelineProvider>
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/export" element={<ExportView />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </PipelineProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/export" element={<ExportView />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
           </MobileProvider>
         </ProjectProvider>
       </TooltipProvider>
