@@ -83,5 +83,6 @@ export const usePipeline = () => {
   return context;
 };
 
-// Re-export types for easy access
-export { PipelinePanel, NarrationType, NarrationFormat, VoiceType } from './pipeline/types';
+// Re-export types with "export type" for proper TypeScript behavior with isolatedModules
+export type { PipelinePanel, NarrationType, NarrationFormat, VoiceType } from './pipeline/types';
+
