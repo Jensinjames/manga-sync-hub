@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +5,6 @@ import { useProject } from '@/contexts/ProjectContext';
 import { Upload, Eye, Download, RotateCcw, Save, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-
 export const Header = () => {
   const {
     project,
@@ -64,7 +62,7 @@ export const Header = () => {
   };
   return <header className="bg-manga-dark border-b border-manga-darker px-6 py-4 flex justify-between items-center">
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold text-white">MangaSync Solo</h1>
+        <h1 className="text-2xl font-bold text-blue-500">MangaSync Solo</h1>
         <Input value={projectName} onChange={handleNameChange} onBlur={handleNameBlur} onKeyDown={handleKeyDown} className="max-w-[240px] bg-manga-darker text-white border-manga-darker focus:border-manga-primary" />
       </div>
       <div className="flex gap-3 bg-slate-900">
