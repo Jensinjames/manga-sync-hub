@@ -9,7 +9,45 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      panel_metadata: {
+        Row: {
+          action_level: string | null
+          character_count: number | null
+          content: string | null
+          created_at: string | null
+          id: string
+          metadata: Json
+          mood: string | null
+          panel_id: string
+          scene_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          action_level?: string | null
+          character_count?: number | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json
+          mood?: string | null
+          panel_id: string
+          scene_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          action_level?: string | null
+          character_count?: number | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json
+          mood?: string | null
+          panel_id?: string
+          scene_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

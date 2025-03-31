@@ -6,11 +6,78 @@ import { Loader2, Wand2, AlertCircle } from 'lucide-react';
 import { usePipeline } from '@/contexts/PipelineContext';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export const ImageProcessor: React.FC = () => {
-  const { selectedPanels, setActivePanel, processPanel } = usePipeline();
+  const { selectedPanels, setActivePanel, setSelectedPanels } = usePipeline();
   const [processingAll, setProcessingAll] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  // Function to process a single panel
+  const processPanel = async (panelId: string) => {
+    // Find the panel in the selected panels
+    const panelIndex = selectedPanels.findIndex(p => p.id === panelId);
+    if (panelIndex === -1) return;
+    
+    // Mark the panel as processing
+    const updatedPanels = [...selectedPanels];
+    updatedPanels[panelIndex] = { 
+      ...updatedPanels[panelIndex], 
+      isProcessing: true,
+      isError: false 
+    };
+    setSelectedPanels(updatedPanels);
+
+    try {
+      // Convert image to base64 if it's not already
+      const imageBase64 = selectedPanels[panelIndex].imageUrl;
+      if (!imageBase64.startsWith('data:image')) {
+        throw new Error('Image must be in base64 format');
+      }
+
+      // Call the Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('process-panel', {
+        body: {
+          imageBase64,
+          panelId
+        }
+      });
+
+      if (error) throw error;
+
+      // Update the panel with the results
+      const resultPanels = [...selectedPanels];
+      resultPanels[panelIndex] = {
+        ...resultPanels[panelIndex],
+        isProcessing: false,
+        metadata: data.result,
+        content: data.result.content,
+        sceneType: data.result.scene_type,
+        characterCount: data.result.character_count,
+        mood: data.result.mood,
+        actionLevel: data.result.action_level
+      };
+      setSelectedPanels(resultPanels);
+
+      return data.result;
+    } catch (error) {
+      console.error("Error processing panel:", error);
+      
+      // Mark the panel as having an error
+      const errorPanels = [...selectedPanels];
+      errorPanels[panelIndex] = {
+        ...errorPanels[panelIndex],
+        isProcessing: false,
+        isError: true,
+        errorMessage: error instanceof Error ? error.message : 'An error occurred'
+      };
+      setSelectedPanels(errorPanels);
+      
+      // Show a toast with the error
+      toast.error(`Failed to process panel: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
+    }
+  };
 
   const handleProcessAll = async () => {
     if (selectedPanels.length === 0) {
@@ -21,19 +88,30 @@ export const ImageProcessor: React.FC = () => {
     setProcessingAll(true);
     setProgress(0);
     
+    let successCount = 0;
     for (let i = 0; i < selectedPanels.length; i++) {
       const panel = selectedPanels[i];
-      await processPanel(panel.id);
+      const result = await processPanel(panel.id);
+      if (result) successCount++;
       setProgress(Math.round(((i + 1) / selectedPanels.length) * 100));
     }
     
     setProcessingAll(false);
-    toast.success("All images processed");
+    
+    if (successCount === selectedPanels.length) {
+      toast.success("All panels processed successfully");
+    } else if (successCount > 0) {
+      toast.warning(`Processed ${successCount} out of ${selectedPanels.length} panels`);
+    } else {
+      toast.error("Failed to process any panels");
+    }
   };
 
   const handleProcessSingle = async (panel: any) => {
-    await processPanel(panel.id);
-    toast.success("Image processed");
+    const result = await processPanel(panel.id);
+    if (result) {
+      toast.success("Panel processed successfully");
+    }
   };
 
   const handlePanelClick = (panel: any) => {
@@ -110,7 +188,14 @@ export const ImageProcessor: React.FC = () => {
                 </div>
                 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-400">Panel {selectedPanels.indexOf(panel) + 1}</span>
+                  <div>
+                    <span className="text-sm text-gray-400">Panel {selectedPanels.indexOf(panel) + 1}</span>
+                    {panel.metadata && (
+                      <span className="text-xs text-green-500 ml-2">
+                        ✓ Processed
+                      </span>
+                    )}
+                  </div>
                   <Button
                     size="sm"
                     variant="outline"
@@ -125,6 +210,8 @@ export const ImageProcessor: React.FC = () => {
                       <Loader2 size={14} className="animate-spin" />
                     ) : panel.isError ? (
                       'Retry'
+                    ) : panel.metadata ? (
+                      'Reprocess'
                     ) : (
                       'Process'
                     )}

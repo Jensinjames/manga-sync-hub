@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { MangaPanel } from '@/types/manga';
 
@@ -15,6 +14,12 @@ export interface PipelinePanel extends MangaPanel {
   isProcessing?: boolean;
   isError?: boolean;
   errorMessage?: string;
+  metadata?: any;
+  content?: string;
+  sceneType?: string;
+  characterCount?: number;
+  mood?: string;
+  actionLevel?: string;
 }
 
 interface PipelineContextType {
@@ -44,40 +49,7 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [voiceType, setVoiceType] = useState<VoiceType>('male');
 
   const processPanel = async (panelId: string) => {
-    setSelectedPanels(panels => 
-      panels.map(panel => 
-        panel.id === panelId 
-          ? { ...panel, isProcessing: true }
-          : panel
-      )
-    );
-
-    try {
-      // Here we will call the edge function to analyze the image
-      // For now, we'll just simulate a successful process
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setSelectedPanels(panels => 
-        panels.map(panel => 
-          panel.id === panelId 
-            ? { ...panel, isProcessing: false }
-            : panel
-        )
-      );
-    } catch (error) {
-      setSelectedPanels(panels => 
-        panels.map(panel => 
-          panel.id === panelId 
-            ? { 
-                ...panel, 
-                isProcessing: false, 
-                isError: true, 
-                errorMessage: error instanceof Error ? error.message : 'An error occurred' 
-              }
-            : panel
-        )
-      );
-    }
+    console.log(`Process panel method called for ${panelId}, but processing is handled in ImageProcessor component`);
   };
 
   const generateNarration = async (panelId: string) => {
@@ -90,8 +62,6 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
     );
 
     try {
-      // Here we will call the edge function to generate narration
-      // For now, we'll just simulate a successful narration generation
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const mockNarration = "As the sun sets over the bustling city, our protagonist stands at the crossroads of destiny. The weight of their decisions hangs in the air, tension rising with each passing moment.";
@@ -110,7 +80,6 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
         )
       );
       
-      // Update active panel if this is the one being viewed
       if (activePanel?.id === panelId) {
         setActivePanel(prev => prev ? { 
           ...prev, 
@@ -146,11 +115,8 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
     );
 
     try {
-      // Here we will call the edge function to generate audio
-      // For now, we'll just simulate a successful audio generation
       await new Promise(resolve => setTimeout(resolve, 2500));
       
-      // Placeholder audio URL for demonstration
       const mockAudioUrl = "https://example.com/audio.mp3";
       
       setSelectedPanels(panels => 
@@ -166,7 +132,6 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
         )
       );
       
-      // Update active panel if this is the one being viewed
       if (activePanel?.id === panelId) {
         setActivePanel(prev => prev ? { 
           ...prev, 
@@ -200,7 +165,6 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
       )
     );
     
-    // Update active panel if this is the one being viewed
     if (activePanel?.id === panelId) {
       setActivePanel(prev => prev ? { ...prev, narration } : null);
     }
