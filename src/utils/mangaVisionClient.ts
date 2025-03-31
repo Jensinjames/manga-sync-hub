@@ -1,11 +1,12 @@
 
-import * as GradioClient from "@gradio/client";
+import { Client } from "@gradio/client";
 import { PanelLabel } from "@/contexts/pipeline/types";
 
 export type MangaVisionAnnotation = {
   label: string;
   confidence: number;
   bbox: [number, number, number, number]; // [x1, y1, x2, y2] format
+  image?: string;
 };
 
 export type MangaVisionPredictionResult = {
@@ -33,10 +34,10 @@ export const DEFAULT_CONFIG: MangaVisionConfig = {
  * This can be used for direct client-side processing when debugging or in development
  */
 export class MangaVisionClient {
-  private client: any = null;
+  private client: Client | null = null;
   private readonly apiEndpoint = "/_gr_detect";
   private config: MangaVisionConfig;
-  private connectionPromise: Promise<any> | null = null;
+  private connectionPromise: Promise<Client> | null = null;
 
   constructor(config: Partial<MangaVisionConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -45,15 +46,20 @@ export class MangaVisionClient {
   /**
    * Connect to the HuggingFace Space
    */
-  async connect(): Promise<any> {
+  async connect(): Promise<Client> {
     if (this.client) return this.client;
     
     if (!this.connectionPromise) {
-      // Fixed: Pass both the space name and an empty options object to match the expected parameters
-      this.connectionPromise = GradioClient.client(this.config.spaceName, {}).then(client => {
-        this.client = client;
-        return client;
-      });
+      try {
+        // Using the proper Client.connect method from @gradio/client
+        this.connectionPromise = Client.connect(this.config.spaceName).then(client => {
+          this.client = client;
+          return client;
+        });
+      } catch (error) {
+        console.error("Failed to connect to Gradio client:", error);
+        throw error;
+      }
     }
     
     return this.connectionPromise;
@@ -61,7 +67,7 @@ export class MangaVisionClient {
 
   /**
    * Predict objects in an image using the Manga109 YOLO model
-   * @param imageData Base64 encoded image or URL to an image
+   * @param imageData Base64 encoded image, URL to an image, or Blob
    * @returns Prediction result with annotations
    */
   async predict(
@@ -71,26 +77,28 @@ export class MangaVisionClient {
     
     // Prepare the image input (handle both string and Blob types)
     const imageInput = typeof imageData === 'string' 
-      ? { path: imageData } 
+      ? imageData 
       : imageData;
 
     try {
       console.log(`Calling Manga109 YOLO API with model ${this.config.modelName}`);
       
-      const result = await client.predict(this.apiEndpoint, [
-        imageInput,
-        this.config.modelName,
-        this.config.iouThreshold,
-        this.config.scoreThreshold,
-        this.config.allowDynamic
-      ]);
+      const result = await client.predict(this.apiEndpoint, {
+        image: imageInput,
+        model_name: this.config.modelName,
+        iou_threshold: this.config.iouThreshold,
+        score_threshold: this.config.scoreThreshold,
+        allow_dynamic: this.config.allowDynamic
+      });
 
-      if (!result.data || !Array.isArray(result.data[0]?.annotations)) {
+      // Handle the result in the new format
+      const data = result.data as any;
+      if (!data || !Array.isArray(data.annotations)) {
         throw new Error('Invalid response format from the model');
       }
 
       return {
-        annotations: result.data[0].annotations
+        annotations: data.annotations
       };
     } catch (error) {
       console.error('Error predicting with MangaVisionClient:', error);
@@ -150,3 +158,34 @@ export class MangaVisionClient {
     return new Blob([uInt8Array], { type: contentType });
   }
 }
+
+/**
+ * React hook for using MangaVisionClient
+ */
+export function useMangaVisionClient(config: Partial<MangaVisionConfig> = {}) {
+  const [result, setResult] = useState<MangaVisionPredictionResult | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [client] = useState(() => new MangaVisionClient(config));
+
+  const predict = async (imageData: string | Blob) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const predictionResult = await client.predict(imageData);
+      setResult(predictionResult);
+      return predictionResult;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { predict, result, error, loading, client };
+}
+
+// Import React useState for the hook
+import { useState } from 'react';
