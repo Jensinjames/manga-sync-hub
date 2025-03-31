@@ -22,9 +22,9 @@ export const StoryboardTimeline = () => {
 
   // Mock time codes if there are no panels
   const mockPanels = [
-    { id: 'mock1', timeCode: '0:03', durationSec: 3, imageUrl: '' },
-    { id: 'mock2', timeCode: '0:05', durationSec: 5, imageUrl: '' },
-    { id: 'mock3', timeCode: '0:08', durationSec: 8, imageUrl: '' },
+    { id: 'mock1', timeCode: '0:03', durationSec: 3, imageUrl: '', pageId: 'mock-page' },
+    { id: 'mock2', timeCode: '0:05', durationSec: 5, imageUrl: '', pageId: 'mock-page' },
+    { id: 'mock3', timeCode: '0:08', durationSec: 8, imageUrl: '', pageId: 'mock-page' },
   ];
 
   const displayPanels = sortedPanels.length > 0 ? sortedPanels : mockPanels;
@@ -77,10 +77,10 @@ export const StoryboardTimeline = () => {
     const sourcePageId = e.dataTransfer.getData('pageId');
     
     // Find target panel's page
-    let targetPageId = project.pages[0]?.id;
+    let targetPageId = project.pages?.[0]?.id || '';
     
-    if (targetIndex < sortedPanels.length) {
-      targetPageId = sortedPanels[targetIndex].pageId;
+    if (targetIndex < displayPanels.length) {
+      targetPageId = displayPanels[targetIndex].pageId || targetPageId;
     }
     
     if (sourcePanelId && sourcePageId && targetPageId) {
@@ -121,7 +121,7 @@ export const StoryboardTimeline = () => {
             className={`flex flex-col items-center ${draggedPanel === panel.id ? 'opacity-50' : ''}`}
             onClick={() => panel.imageUrl && selectPanel(panel.id)}
             draggable={!!panel.imageUrl}
-            onDragStart={(e) => panel.imageUrl && handleDragStart(e, panel.id, panel.pageId)}
+            onDragStart={(e) => panel.imageUrl && handleDragStart(e, panel.id, panel.pageId || '')}
             onDragEnd={handleDragEnd}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handleDrop(e, index)}

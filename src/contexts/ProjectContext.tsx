@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { ProjectData, MangaPage, MangaPanel } from '@/types/manga';
 import { toast } from 'sonner';
@@ -73,8 +72,7 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     
   const selectedPanel = selectedPage?.panels.find(panel => panel.id === project.selectedPanelId) || null;
   
-  // Get all panels across all pages, sorted by timeCode
-  const sortedPanels = getSortedPanels(project);
+  const sortedPanels = project && project.pages ? getSortedPanels(project) : [];
 
   useEffect(() => {
     const intervalId = setInterval(() => {

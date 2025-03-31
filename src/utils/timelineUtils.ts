@@ -79,6 +79,11 @@ export const reorderPanels = (
  * Gets all panels across all pages sorted by timeCode
  */
 export const getSortedPanels = (project: ProjectData): (MangaPanel & { pageId: string })[] => {
+  // Add null check for project or project.pages
+  if (!project || !project.pages) {
+    return [];
+  }
+  
   // Collect all panels across all pages
   const allPanels = project.pages.flatMap(page => 
     page.panels.map(panel => ({
