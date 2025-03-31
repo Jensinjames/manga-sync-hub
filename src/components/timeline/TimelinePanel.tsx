@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Clock, GripHorizontal } from 'lucide-react';
 import { isDebugMode } from '@/utils/debugUtils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TimelinePanelProps {
   panel: any;
@@ -30,6 +31,8 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
   onDragStart,
   onDragEnd
 }) => {
+  const isMobile = useIsMobile();
+  
   return (
     <div 
       className={`flex flex-col items-center ${isDragging ? 'opacity-50' : ''}`}
@@ -39,7 +42,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
       onDragEnd={onDragEnd}
     >
       <Card 
-        className={`w-24 h-24 cursor-pointer transition-all hover:ring-2 hover:ring-manga-primary ${
+        className={`${isMobile ? 'w-20 h-20' : 'w-24 h-24'} cursor-pointer transition-all hover:ring-2 hover:ring-manga-primary ${
           selectedPanelId === panel.id ? 'ring-2 ring-manga-primary' : ''
         } relative`}
       >
@@ -67,7 +70,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
         <Input
           value={panel.timeCode}
           onChange={(e) => onTimeCodeChange(panel, e.target.value)}
-          className="w-16 h-6 text-xs p-1 bg-manga-darker text-gray-200"
+          className={`${isMobile ? 'w-14' : 'w-16'} h-6 text-xs p-1 bg-manga-darker text-gray-200`}
           disabled={!panel.imageUrl}
         />
       </div>
