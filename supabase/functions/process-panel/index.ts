@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { imageUrl, panelId } = await req.json();
+    const { imageUrl, panelId, jobId } = await req.json();
     
     if (!imageUrl) {
       throw new Error('Image URL is required');
@@ -24,7 +24,7 @@ serve(async (req) => {
       throw new Error('Panel ID is required');
     }
 
-    console.log(`Processing panel: ${panelId}`);
+    console.log(`Processing panel: ${panelId}, job: ${jobId || 'no job ID'}`);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -36,6 +36,17 @@ serve(async (req) => {
     
     // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Update job status if jobId is provided
+    if (jobId) {
+      await supabase
+        .from('panel_jobs')
+        .update({ 
+          status: 'processing',
+          started_at: new Date().toISOString()
+        })
+        .eq('id', jobId);
+    }
     
     // Generate a simple hash of the image URL for caching
     const hashImageUrl = (url: string) => {
@@ -59,6 +70,19 @@ serve(async (req) => {
     
     if (existingData?.metadata?.imageHash === imageHash && existingData?.metadata?.labels) {
       console.log(`Using cached results for panel ${panelId}`);
+      
+      // Update job status to done if jobId is provided
+      if (jobId) {
+        await supabase
+          .from('panel_jobs')
+          .update({ 
+            status: 'done',
+            completed_at: new Date().toISOString(),
+            metadata: existingData.metadata
+          })
+          .eq('id', jobId);
+      }
+      
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -116,6 +140,19 @@ serve(async (req) => {
           if (!submitRes.ok) {
             const errorText = await submitRes.text();
             console.error(`API initialization failed with status ${submitRes.status}: ${errorText}`);
+            
+            // Update job status to error if jobId is provided
+            if (jobId) {
+              await supabase
+                .from('panel_jobs')
+                .update({ 
+                  status: 'error',
+                  completed_at: new Date().toISOString(),
+                  error_message: `API initialization failed with status ${submitRes.status}: ${errorText}`
+                })
+                .eq('id', jobId);
+            }
+            
             throw new Error(`API returned ${submitRes.status}: ${errorText}`);
           }
 
@@ -142,6 +179,18 @@ serve(async (req) => {
               eventId = eventIdMatch[1];
               console.log(`Extracted event ID from SSE: ${eventId}`);
             } else {
+              // Update job status to error if jobId is provided
+              if (jobId) {
+                await supabase
+                  .from('panel_jobs')
+                  .update({ 
+                    status: 'error',
+                    completed_at: new Date().toISOString(),
+                    error_message: "Failed to get event ID from response"
+                  })
+                  .eq('id', jobId);
+              }
+              
               throw new Error("Failed to get event ID from response");
             }
           }
@@ -270,6 +319,18 @@ serve(async (req) => {
             })
             .select();
           
+          // Update job status to done if jobId is provided
+          if (jobId) {
+            await supabase
+              .from('panel_jobs')
+              .update({ 
+                status: 'done',
+                completed_at: new Date().toISOString(),
+                metadata: analysisResult
+              })
+              .eq('id', jobId);
+          }
+          
           if (error) {
             console.error("Database error:", error);
             throw new Error(`Failed to store panel metadata: ${error.message}`);
@@ -294,6 +355,18 @@ serve(async (req) => {
               content: "Error processing image"
             });
             
+          // Update job status to error if jobId is provided
+          if (jobId) {
+            await supabase
+              .from('panel_jobs')
+              .update({ 
+                status: 'error',
+                completed_at: new Date().toISOString(),
+                error_message: apiError.message
+              })
+              .eq('id', jobId);
+          }
+          
           throw apiError;
         }
       } catch (bgError) {

@@ -47,6 +47,7 @@ export interface PipelinePanel extends MangaPanel {
   status?: PanelStatus;
   lastProcessedAt?: string;
   debugOverlay?: PanelLabel[];
+  jobId?: string;
 }
 
 export interface PipelineContextType {
@@ -66,4 +67,5 @@ export interface PipelineContextType {
   updatePanelNarration: (panelId: string, narration: string) => void;
   debugMode: boolean;
   setDebugMode: React.Dispatch<React.SetStateAction<boolean>>;
+  jobsRunning: Record<string, boolean>;
 }

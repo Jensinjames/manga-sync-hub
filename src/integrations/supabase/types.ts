@@ -9,6 +9,77 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          changed_at: string | null
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          operation: string | null
+          table_name: string | null
+        }
+        Insert: {
+          changed_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          operation?: string | null
+          table_name?: string | null
+        }
+        Update: {
+          changed_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          operation?: string | null
+          table_name?: string | null
+        }
+        Relationships: []
+      }
+      panel_jobs: {
+        Row: {
+          attempt_count: number | null
+          completed_at: string | null
+          error_message: string | null
+          id: string
+          job_type: string
+          metadata: Json | null
+          panel_id: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          attempt_count?: number | null
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_type: string
+          metadata?: Json | null
+          panel_id: string
+          started_at?: string | null
+          status: string
+        }
+        Update: {
+          attempt_count?: number | null
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          metadata?: Json | null
+          panel_id?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "panel_jobs_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panel_metadata"
+            referencedColumns: ["panel_id"]
+          },
+        ]
+      }
       panel_metadata: {
         Row: {
           action_level: string | null

@@ -9,7 +9,7 @@ import {
   errorHasLength,
   getErrorString
 } from '../types/panelMetadataTypes';
-import { getPanelMetadata } from '../api/panelEdgeFunctionClient';
+import { getPanelMetadata, getPanelJobs } from '../api/panelEdgeFunctionClient';
 
 // Poll for processing status until complete
 export const pollProcessingStatus = async (
@@ -30,32 +30,43 @@ export const pollProcessingStatus = async (
       const panelIndex = currentPanels.findIndex(p => p.id === panelId);
       if (panelIndex === -1) break; // Panel was removed, stop polling
       
-      // Query the database using the Edge Function proxy
-      const response = await getPanelMetadata(panelId);
+      // Get both panel metadata and job status
+      const [metadataResponse, jobsResponse] = await Promise.all([
+        getPanelMetadata(panelId),
+        getPanelJobs(panelId)
+      ]);
       
-      if (!response || !response.data) {
-        console.log("No metadata found, will retry", response);
+      if (!metadataResponse || !metadataResponse.data || !metadataResponse.data.metadata) {
+        console.log("No metadata found, will retry");
         retryCount++;
         continue;
       }
       
-      // Convert the metadata to a strongly typed object
-      const metadata = convertToMetadata(response.data.metadata || response.data);
+      // Check job status first (it's more authoritative)
+      const latestJob = jobsResponse && jobsResponse.length > 0 ? jobsResponse[0] : null;
+      const jobStatus = latestJob ? latestJob.status : 'unknown';
       
-      // Check if processing is complete
-      if (metadata.processing !== true) {
+      // Convert the metadata to a strongly typed object
+      const metadata = convertToMetadata(metadataResponse.data.metadata.metadata || metadataResponse.data.metadata);
+      
+      // Determine if processing is complete based on job status and metadata
+      if ((jobStatus === 'done' || jobStatus === 'error') || metadata.processing !== true) {
         isProcessing = false;
         
         // Convert labels to the format expected by the pipeline
         const pipelineLabels = convertLabelsForPipeline(metadata);
+        
+        // Check if we have an error from the job or the metadata
+        const hasError = jobStatus === 'error' || errorHasLength(metadata.error);
+        const errorMessage = latestJob?.error_message || getErrorString(metadata.error);
         
         // Update the panel with the results
         const updatedPanels = [...currentPanels];
         updatedPanels[panelIndex] = {
           ...updatedPanels[panelIndex],
           isProcessing: false,
-          isError: errorHasLength(metadata.error),
-          status: errorHasLength(metadata.error) ? 'error' : 'done',
+          isError: hasError,
+          status: hasError ? 'error' : 'done',
           metadata: {
             ...(metadata as any), // Type assertion to avoid incompatible labels
             labels: pipelineLabels // Use the converted labels that match PanelLabel[]
@@ -67,13 +78,13 @@ export const pollProcessingStatus = async (
           actionLevel: metadata.action_level,
           lastProcessedAt: metadata.processed_at,
           debugOverlay: pipelineLabels,
-          errorMessage: getErrorString(metadata.error)
+          errorMessage: errorMessage
         };
         setSelectedPanels(updatedPanels);
         
         // Show appropriate toast
-        if (errorHasLength(metadata.error)) {
-          toast.error(`Processing failed: ${getErrorString(metadata.error)}`);
+        if (hasError) {
+          toast.error(`Processing failed: ${errorMessage}`);
         } else {
           toast.success('Panel processing completed');
         }

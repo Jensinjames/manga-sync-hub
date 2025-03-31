@@ -33,24 +33,46 @@ serve(async (req) => {
     // Create Supabase client with explicit schema selection
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Explicitly query the public schema for the panel_metadata table
-    const { data, error } = await supabase
-      .from('panel_metadata')
-      .select('*')  // Select all fields to ensure we get everything we need
-      .eq('panel_id', panelId)
-      .maybeSingle();
+    // Fetch both panel metadata and the latest job status
+    const [metadataResult, jobsResult] = await Promise.all([
+      // Get panel metadata
+      supabase
+        .from('panel_metadata')
+        .select('*')
+        .eq('panel_id', panelId)
+        .maybeSingle(),
       
-    if (error) {
-      console.error("Database error:", error);
-      throw error;
+      // Get latest job for this panel
+      supabase
+        .from('panel_jobs')
+        .select('*')
+        .eq('panel_id', panelId)
+        .order('started_at', { ascending: false })
+        .limit(1)
+    ]);
+    
+    if (metadataResult.error) {
+      console.error("Database error (metadata):", metadataResult.error);
+      throw metadataResult.error;
     }
+    
+    if (jobsResult.error) {
+      console.error("Database error (jobs):", jobsResult.error);
+      throw jobsResult.error;
+    }
+    
+    // Combine the data
+    const responseData = {
+      metadata: metadataResult.data,
+      latestJob: jobsResult.data && jobsResult.data.length > 0 ? jobsResult.data[0] : null
+    };
     
     console.log("Successfully retrieved panel metadata");
     
     return new Response(
       JSON.stringify({ 
         success: true, 
-        data
+        data: responseData
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

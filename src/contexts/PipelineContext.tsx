@@ -19,6 +19,7 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [narrationFormat, setNarrationFormat] = useState<NarrationFormat>('narrative prose');
   const [voiceType, setVoiceType] = useState<VoiceType>('male');
   const [debugMode, setDebugMode] = useState<boolean>(isDebugMode());
+  const [jobsRunning, setJobsRunning] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const checkDebugMode = () => {
@@ -32,30 +33,48 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, []);
 
   const processPanel = async (panelId: string) => {
-    await processPanelOperation(panelId, selectedPanels, setSelectedPanels);
+    // Track job status
+    setJobsRunning(prev => ({ ...prev, [panelId]: true }));
+    try {
+      await processPanelOperation(panelId, selectedPanels, setSelectedPanels);
+    } finally {
+      setJobsRunning(prev => ({ ...prev, [panelId]: false }));
+    }
   };
 
   const generateNarration = async (panelId: string) => {
-    await generateNarrationOperation(
-      panelId,
-      selectedPanels,
-      setSelectedPanels,
-      activePanel,
-      setActivePanel,
-      narrationTone,
-      narrationFormat
-    );
+    // Track job status
+    setJobsRunning(prev => ({ ...prev, [panelId]: true }));
+    try {
+      await generateNarrationOperation(
+        panelId,
+        selectedPanels,
+        setSelectedPanels,
+        activePanel,
+        setActivePanel,
+        narrationTone,
+        narrationFormat
+      );
+    } finally {
+      setJobsRunning(prev => ({ ...prev, [panelId]: false }));
+    }
   };
 
   const generateAudio = async (panelId: string) => {
-    await generateAudioOperation(
-      panelId,
-      selectedPanels,
-      setSelectedPanels,
-      activePanel,
-      setActivePanel,
-      voiceType
-    );
+    // Track job status
+    setJobsRunning(prev => ({ ...prev, [panelId]: true }));
+    try {
+      await generateAudioOperation(
+        panelId,
+        selectedPanels,
+        setSelectedPanels,
+        activePanel,
+        setActivePanel,
+        voiceType
+      );
+    } finally {
+      setJobsRunning(prev => ({ ...prev, [panelId]: false }));
+    }
   };
 
   const updatePanelNarration = (panelId: string, narration: string) => {
@@ -85,7 +104,8 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
     generateAudio,
     updatePanelNarration,
     debugMode,
-    setDebugMode
+    setDebugMode,
+    jobsRunning
   };
 
   return (
