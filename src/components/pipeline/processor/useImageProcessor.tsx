@@ -1,8 +1,9 @@
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePipeline } from '@/contexts/PipelineContext';
 import { toast } from 'sonner';
 import { PipelinePanel } from '@/contexts/pipeline/types';
+import { loadResources } from '@/contexts/pipeline/pipelineOperations';
 
 export const useImageProcessor = () => {
   const { 
@@ -17,6 +18,7 @@ export const useImageProcessor = () => {
   const [processingAll, setProcessingAll] = useState(false);
   const [progress, setProgress] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [resourcesLoaded, setResourcesLoaded] = useState(false);
 
   // Clean up any resources when the component unmounts
   useEffect(() => {
@@ -26,11 +28,22 @@ export const useImageProcessor = () => {
     };
   }, []);
 
+  // Lazy load resources only when needed
+  const ensureResourcesLoaded = useCallback(async () => {
+    if (!resourcesLoaded) {
+      const loaded = await loadResources();
+      setResourcesLoaded(loaded);
+      return loaded;
+    }
+    return true;
+  }, [resourcesLoaded]);
+
   const handleProcessSingle = async (panel: PipelinePanel, event?: React.MouseEvent) => {
     if (event) {
       event.stopPropagation();
     }
     
+    await ensureResourcesLoaded();
     await processPanelFromContext(panel.id);
     updateElementVisibility();
   };
@@ -38,6 +51,12 @@ export const useImageProcessor = () => {
   const handleProcessAll = async () => {
     if (selectedPanels.length === 0) {
       toast.error("No images to process");
+      return;
+    }
+
+    const resourceCheck = await ensureResourcesLoaded();
+    if (!resourceCheck) {
+      toast.error("Failed to load required resources");
       return;
     }
 
