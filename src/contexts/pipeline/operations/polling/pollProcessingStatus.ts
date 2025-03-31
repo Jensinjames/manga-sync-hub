@@ -4,6 +4,7 @@ import { PipelinePanel } from '../../types';
 import { toast } from 'sonner';
 import { sleep } from '../utils/panelProcessingUtils';
 import { convertToMetadata } from '../types/panelMetadataTypes';
+import { getPanelMetadata } from '../api/panelEdgeFunctionClient';
 
 // Poll for processing status until complete
 export const pollProcessingStatus = async (
@@ -24,18 +25,8 @@ export const pollProcessingStatus = async (
       const panelIndex = currentPanels.findIndex(p => p.id === panelId);
       if (panelIndex === -1) break; // Panel was removed, stop polling
       
-      // Query the database for the current status - using the from() method with proper schema
-      const { data, error } = await supabase
-        .from('panel_metadata')
-        .select('metadata')
-        .eq('panel_id', panelId)
-        .maybeSingle();
-        
-      if (error) {
-        console.error("Error checking processing status:", error);
-        retryCount++;
-        continue;
-      }
+      // Query the database using the Edge Function proxy
+      const data = await getPanelMetadata(panelId);
       
       // Check if metadata exists
       if (!data?.metadata) {

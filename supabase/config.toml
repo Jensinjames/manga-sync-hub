@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.text-to-speech]
 verify_jwt = false
+
+[functions.get-panel-metadata]
+verify_jwt = false
