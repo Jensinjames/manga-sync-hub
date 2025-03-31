@@ -2,9 +2,15 @@
 import { PipelinePanel } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Json } from '@/integrations/supabase/types';
 
 // Helper for exponential backoff
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper to safely type-check JSON metadata
+const isMetadataObject = (data: Json): data is { [key: string]: any } => {
+  return typeof data === 'object' && data !== null && !Array.isArray(data);
+};
 
 export const processPanel = async (
   panelId: string,
@@ -51,26 +57,32 @@ export const processPanel = async (
         if (error) throw error;
         if (!data || !data.result) throw new Error('Invalid response from edge function');
         
+        // Safely type check the result data
+        const result = data.result;
+        if (!isMetadataObject(result)) {
+          throw new Error('Invalid metadata format from edge function');
+        }
+        
         // Update the panel with the initial processing status
         const resultPanels = [...selectedPanels];
         resultPanels[panelIndex] = {
           ...resultPanels[panelIndex],
-          isProcessing: data.processing || false,
-          status: data.processing ? 'processing' : 'done',
-          metadata: data.result,
-          content: data.result.content,
-          sceneType: data.result.scene_type,
-          characterCount: data.result.character_count,
-          mood: data.result.mood,
-          actionLevel: data.result.action_level,
-          lastProcessedAt: data.result.processed_at,
+          isProcessing: result.processing === true,
+          status: result.processing === true ? 'processing' : 'done',
+          metadata: result,
+          content: result.content as string | undefined,
+          sceneType: result.scene_type as string | undefined,
+          characterCount: typeof result.character_count === 'number' ? result.character_count : undefined,
+          mood: result.mood as string | undefined,
+          actionLevel: result.action_level as string | undefined,
+          lastProcessedAt: result.processed_at as string | undefined,
           // Set debug overlay if we have labels
-          debugOverlay: data.result.labels
+          debugOverlay: Array.isArray(result.labels) ? result.labels : undefined
         };
         setSelectedPanels(resultPanels);
         
         // If processing is happening in background, start polling
-        if (data.processing) {
+        if (result.processing === true) {
           toast.info('Processing started - this may take a moment');
           pollProcessingStatus(panelId, selectedPanels, setSelectedPanels);
         } else {
@@ -144,8 +156,14 @@ const pollProcessingStatus = async (
         continue;
       }
       
+      // Check if metadata exists and is an object
+      if (!data?.metadata || !isMetadataObject(data.metadata)) {
+        retryCount++;
+        continue;
+      }
+      
       // Check if processing is complete
-      if (data?.metadata && !data.metadata.processing) {
+      if (data.metadata.processing !== true) {
         isProcessing = false;
         
         // Update the panel with the results
@@ -156,14 +174,14 @@ const pollProcessingStatus = async (
           isError: !!data.metadata.error,
           status: data.metadata.error ? 'error' : 'done',
           metadata: data.metadata,
-          content: data.metadata.content || "Processing complete",
-          sceneType: data.metadata.scene_type,
-          characterCount: data.metadata.character_count,
-          mood: data.metadata.mood,
-          actionLevel: data.metadata.action_level,
-          lastProcessedAt: data.metadata.processed_at,
-          debugOverlay: data.metadata.labels,
-          errorMessage: data.metadata.error
+          content: data.metadata.content as string | undefined,
+          sceneType: data.metadata.scene_type as string | undefined,
+          characterCount: typeof data.metadata.character_count === 'number' ? data.metadata.character_count : undefined,
+          mood: data.metadata.mood as string | undefined,
+          actionLevel: data.metadata.action_level as string | undefined,
+          lastProcessedAt: data.metadata.processed_at as string | undefined,
+          debugOverlay: Array.isArray(data.metadata.labels) ? data.metadata.labels : undefined,
+          errorMessage: data.metadata.error as string | undefined
         };
         setSelectedPanels(updatedPanels);
         
