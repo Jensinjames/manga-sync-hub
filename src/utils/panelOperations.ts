@@ -32,6 +32,7 @@ export const addPanelToPage = (
     id: uuidv4(),
     imageUrl: panelData.imageUrl,
     timeCode: '0:00',
+    durationSec: 0,
     position: panelData.position,
     notes: {},
   };

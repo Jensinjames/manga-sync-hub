@@ -14,16 +14,16 @@ const ExportView = () => {
   const [includeNotes, setIncludeNotes] = useState(true);
   const [includeThumbnails, setIncludeThumbnails] = useState(true);
   
-  // Ensure project and project.pages exist before using them
+  // Safely access project data
   const pages = project?.pages || [];
   
   // Calculate project statistics with null checks
   const totalPages = pages.length;
-  const totalPanels = pages.reduce((sum, page) => sum + page.panels.length, 0);
+  const totalPanels = pages.reduce((sum, page) => sum + (page?.panels?.length || 0), 0);
   const panelsWithNotes = pages.reduce(
-    (sum, page) => sum + page.panels.filter(panel => 
-      panel.notes.camera || panel.notes.fx || panel.notes.audio
-    ).length, 
+    (sum, page) => sum + (page?.panels?.filter(panel => 
+      panel?.notes?.camera || panel?.notes?.fx || panel?.notes?.audio
+    )?.length || 0), 
     0
   );
 

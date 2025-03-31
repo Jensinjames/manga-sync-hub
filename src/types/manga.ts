@@ -43,6 +43,7 @@ export interface MangaPanel {
   id: string;
   imageUrl: string;
   timeCode: string;
+  durationSec: number; // Added durationSec field
   position?: {
     x: number;
     y: number;
@@ -90,6 +91,7 @@ export const convertDbToAppProject = (
           id: dbPanel.id,
           imageUrl: dbPage.image_url, // We reuse the page image and just crop it
           timeCode: formatDurationToTimeCode(dbPanel.duration_sec || 0),
+          durationSec: dbPanel.duration_sec || 0,
           position: dbPanel.crop_x !== undefined ? {
             x: dbPanel.crop_x,
             y: dbPanel.crop_y || 0,
@@ -148,12 +150,10 @@ export const convertAppToDbProject = (project: ProjectData): {
     dbPages.push(dbPage);
 
     page.panels.forEach(panel => {
-      const durationSec = parseTimeCodeToDuration(panel.timeCode);
-      
       const dbPanel: DbMangaPanel = {
         id: panel.id,
         page_id: page.id,
-        duration_sec: durationSec,
+        duration_sec: panel.durationSec || parseTimeCodeToDuration(panel.timeCode),
         ...(panel.position ? {
           crop_x: panel.position.x,
           crop_y: panel.position.y,
@@ -178,13 +178,13 @@ export const convertAppToDbProject = (project: ProjectData): {
 };
 
 // Helper functions for time code conversion
-const formatDurationToTimeCode = (durationSec: number): string => {
+export const formatDurationToTimeCode = (durationSec: number): string => {
   const minutes = Math.floor(durationSec / 60);
   const seconds = Math.floor(durationSec % 60);
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
-const parseTimeCodeToDuration = (timeCode: string): number => {
+export const parseTimeCodeToDuration = (timeCode: string): number => {
   const [minutesStr, secondsStr] = timeCode.split(':');
   const minutes = parseInt(minutesStr || '0', 10);
   const seconds = parseInt(secondsStr || '0', 10);

@@ -1,9 +1,12 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useProject } from '@/contexts/ProjectContext';
 import { Upload, Eye, Download, RotateCcw, Save, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
+
 export const Header = () => {
   const {
     project,
@@ -72,9 +75,11 @@ export const Header = () => {
         <Button variant="outline" onClick={handleImportClick}>
           <Upload className="mr-2 h-4 w-4" /> Import
         </Button>
-        <Button variant="outline">
-          <Eye className="mr-2 h-4 w-4" /> Preview
-        </Button>
+        <Link to="/export">
+          <Button variant="outline">
+            <Eye className="mr-2 h-4 w-4" /> Preview
+          </Button>
+        </Link>
         <Button variant="outline" onClick={exportProject}>
           <Download className="mr-2 h-4 w-4" /> Export JSON
         </Button>

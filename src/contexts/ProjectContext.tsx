@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { ProjectData, MangaPage, MangaPanel } from '@/types/manga';
 import { toast } from 'sonner';
@@ -18,6 +19,12 @@ import {
   selectPanel as selectPanelUtil
 } from '@/utils/panelOperations';
 
+import {
+  updatePanelDuration,
+  reorderPanels,
+  getSortedPanels
+} from '@/utils/timelineUtils';
+
 interface ExportOptions {
   includeNotes?: boolean;
   includeThumbnails?: boolean;
@@ -27,12 +34,15 @@ interface ProjectContextType {
   project: ProjectData;
   selectedPage: MangaPage | null;
   selectedPanel: MangaPanel | null;
+  sortedPanels: (MangaPanel & { pageId: string })[];
   setProject: (project: ProjectData) => void;
   addPage: (imageUrl: string) => void;
   selectPage: (pageId: string) => void;
   selectPanel: (panelId: string) => void;
   updatePanelNotes: (panelId: string, notes: Partial<MangaPanel['notes']>) => void;
   updatePanelTimeCode: (panelId: string, timeCode: string) => void;
+  updatePanelDuration: (panelId: string, durationSec: number) => void;
+  reorderPanels: (sourcePageId: string, sourcePanelId: string, destinationPageId: string, destinationIndex: number) => void;
   addPanelToPage: (pageId: string, panelData: { imageUrl: string, position?: MangaPanel['position'] }) => void;
   importProject: (file: File) => Promise<void>;
   exportProject: () => void;
@@ -62,6 +72,9 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     : null;
     
   const selectedPanel = selectedPage?.panels.find(panel => panel.id === project.selectedPanelId) || null;
+  
+  // Get all panels across all pages, sorted by timeCode
+  const sortedPanels = getSortedPanels(project);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -118,6 +131,19 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
     setProject(updatePanelTimeCodeUtil(project, panelId, timeCode));
   };
 
+  const handleUpdatePanelDuration = (panelId: string, durationSec: number) => {
+    setProject(updatePanelDuration(project, panelId, durationSec));
+  };
+
+  const handleReorderPanels = (
+    sourcePageId: string, 
+    sourcePanelId: string, 
+    destinationPageId: string, 
+    destinationIndex: number
+  ) => {
+    setProject(reorderPanels(project, sourcePageId, sourcePanelId, destinationPageId, destinationIndex));
+  };
+
   const importProject = async (file: File): Promise<void> => {
     try {
       const importedProject = await importProjectFromFile(file);
@@ -158,12 +184,15 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
         project,
         selectedPage,
         selectedPanel,
+        sortedPanels,
         setProject,
         addPage,
         selectPage,
         selectPanel,
         updatePanelNotes,
         updatePanelTimeCode,
+        updatePanelDuration: handleUpdatePanelDuration,
+        reorderPanels: handleReorderPanels,
         addPanelToPage,
         importProject,
         exportProject,

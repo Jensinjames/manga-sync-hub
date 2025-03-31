@@ -3,36 +3,28 @@ import React, { useState } from 'react';
 import { useProject } from '@/contexts/ProjectContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Play, Clock } from 'lucide-react';
+import { Play, Clock, GripHorizontal } from 'lucide-react';
 import { Button } from './ui/button';
+import { formatDurationToTimeCode } from '@/types/manga';
 
 export const StoryboardTimeline = () => {
-  const { project, selectedPanel, selectPanel, updatePanelTimeCode } = useProject();
+  const { 
+    project, 
+    selectedPanel, 
+    selectPanel, 
+    updatePanelTimeCode, 
+    updatePanelDuration,
+    sortedPanels,
+    reorderPanels
+  } = useProject();
   const [isPlaying, setIsPlaying] = useState(false);
-
-  // Ensure project and project.pages exist before using them
-  const pages = project?.pages || [];
-
-  // Collect all panels across all pages
-  const allPanels = pages.flatMap(page => 
-    page.panels.map(panel => ({
-      ...panel,
-      pageId: page.id
-    }))
-  );
-
-  // Sort panels by timeCode
-  const sortedPanels = [...allPanels].sort((a, b) => {
-    const timeA = a.timeCode.split(':').map(Number);
-    const timeB = b.timeCode.split(':').map(Number);
-    return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-  });
+  const [draggedPanel, setDraggedPanel] = useState<string | null>(null);
 
   // Mock time codes if there are no panels
   const mockPanels = [
-    { id: 'mock1', timeCode: '0:03', imageUrl: '' },
-    { id: 'mock2', timeCode: '0:05', imageUrl: '' },
-    { id: 'mock3', timeCode: '0:08', imageUrl: '' },
+    { id: 'mock1', timeCode: '0:03', durationSec: 3, imageUrl: '' },
+    { id: 'mock2', timeCode: '0:05', durationSec: 5, imageUrl: '' },
+    { id: 'mock3', timeCode: '0:08', durationSec: 8, imageUrl: '' },
   ];
 
   const displayPanels = sortedPanels.length > 0 ? sortedPanels : mockPanels;
@@ -40,6 +32,12 @@ export const StoryboardTimeline = () => {
   const handleTimeCodeChange = (panel: any, newTimeCode: string) => {
     if (panel.imageUrl) { // Ensure it's not a mock panel
       updatePanelTimeCode(panel.id, newTimeCode);
+    }
+  };
+
+  const handleDurationChange = (panel: any, newDuration: number) => {
+    if (panel.imageUrl) { // Ensure it's not a mock panel
+      updatePanelDuration(panel.id, newDuration);
     }
   };
 
@@ -62,6 +60,40 @@ export const StoryboardTimeline = () => {
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, panelId: string, pageId: string) => {
+    e.dataTransfer.setData('panelId', panelId);
+    e.dataTransfer.setData('pageId', pageId);
+    setDraggedPanel(panelId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    const sourcePanelId = e.dataTransfer.getData('panelId');
+    const sourcePageId = e.dataTransfer.getData('pageId');
+    
+    // Find target panel's page
+    let targetPageId = project.pages[0]?.id;
+    
+    if (targetIndex < sortedPanels.length) {
+      targetPageId = sortedPanels[targetIndex].pageId;
+    }
+    
+    if (sourcePanelId && sourcePageId && targetPageId) {
+      reorderPanels(sourcePageId, sourcePanelId, targetPageId, targetIndex);
+    }
+    
+    setDraggedPanel(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedPanel(null);
+  };
+
   return (
     <div className="flex flex-col">
       <div className="flex justify-between items-center mb-4">
@@ -79,25 +111,38 @@ export const StoryboardTimeline = () => {
         )}
       </div>
       
-      <div className="flex gap-4 overflow-x-auto pb-2 items-end min-h-[140px]">
+      <div 
+        className="flex gap-4 overflow-x-auto pb-2 items-end min-h-[140px]"
+        onDragOver={handleDragOver}
+      >
         {displayPanels.map((panel, index) => (
           <div 
             key={panel.id}
-            className="flex flex-col items-center"
+            className={`flex flex-col items-center ${draggedPanel === panel.id ? 'opacity-50' : ''}`}
             onClick={() => panel.imageUrl && selectPanel(panel.id)}
+            draggable={!!panel.imageUrl}
+            onDragStart={(e) => panel.imageUrl && handleDragStart(e, panel.id, panel.pageId)}
+            onDragEnd={handleDragEnd}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, index)}
           >
             <Card 
               className={`w-24 h-24 cursor-pointer transition-all hover:ring-2 hover:ring-manga-primary ${
                 selectedPanel?.id === panel.id ? 'ring-2 ring-manga-primary' : ''
-              }`}
+              } relative`}
             >
               <CardContent className="p-1 h-full flex items-center justify-center">
                 {panel.imageUrl ? (
-                  <img 
-                    src={panel.imageUrl}
-                    alt={`Panel ${index + 1}`}
-                    className="max-w-full max-h-full object-cover" 
-                  />
+                  <>
+                    <img 
+                      src={panel.imageUrl}
+                      alt={`Panel ${index + 1}`}
+                      className="max-w-full max-h-full object-cover" 
+                    />
+                    <div className="absolute top-0 right-0 p-1 cursor-grab">
+                      <GripHorizontal className="w-3 h-3 text-white/70" />
+                    </div>
+                  </>
                 ) : (
                   <div className="w-full h-full bg-manga-dark flex items-center justify-center">
                     <span className="text-xs text-gray-500">No Image</span>
@@ -113,6 +158,9 @@ export const StoryboardTimeline = () => {
                 className="w-16 h-6 text-xs p-1 bg-manga-darker text-gray-200"
                 disabled={!panel.imageUrl}
               />
+            </div>
+            <div className="mt-1 flex items-center gap-1">
+              <span className="text-xs text-gray-400">{panel.durationSec || 0}s</span>
             </div>
           </div>
         ))}

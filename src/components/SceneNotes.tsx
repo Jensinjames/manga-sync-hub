@@ -3,13 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { useProject } from '@/contexts/ProjectContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export const SceneNotes = () => {
-  const { selectedPanel, updatePanelNotes } = useProject();
+  const { selectedPanel, updatePanelNotes, updatePanelDuration } = useProject();
   
   const [cameraDirection, setCameraDirection] = useState(selectedPanel?.notes?.camera || '');
   const [fxNotes, setFxNotes] = useState(selectedPanel?.notes?.fx || '');
   const [audioPlaceholder, setAudioPlaceholder] = useState(selectedPanel?.notes?.audio || '');
+  const [duration, setDuration] = useState(selectedPanel?.durationSec || 0);
 
   // Update state when selected panel changes
   useEffect(() => {
@@ -17,10 +20,12 @@ export const SceneNotes = () => {
       setCameraDirection(selectedPanel.notes.camera || '');
       setFxNotes(selectedPanel.notes.fx || '');
       setAudioPlaceholder(selectedPanel.notes.audio || '');
+      setDuration(selectedPanel.durationSec || 0);
     } else {
       setCameraDirection('');
       setFxNotes('');
       setAudioPlaceholder('');
+      setDuration(0);
     }
   }, [selectedPanel]);
 
@@ -42,6 +47,14 @@ export const SceneNotes = () => {
     setAudioPlaceholder(e.target.value);
     if (selectedPanel) {
       updatePanelNotes(selectedPanel.id, { audio: e.target.value });
+    }
+  };
+
+  const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDuration = parseFloat(e.target.value);
+    setDuration(newDuration);
+    if (selectedPanel) {
+      updatePanelDuration(selectedPanel.id, newDuration);
     }
   };
 
@@ -94,6 +107,26 @@ export const SceneNotes = () => {
               className="resize-none focus:border-manga-primary"
               disabled={!selectedPanel}
               rows={3}
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="bg-manga-dark border-manga-darker">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Duration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Label htmlFor="duration">Duration (seconds)</Label>
+            <Input
+              id="duration"
+              type="number"
+              min="0"
+              step="0.1"
+              value={duration}
+              onChange={handleDurationChange}
+              placeholder="Set duration in seconds..."
+              className="focus:border-manga-primary"
+              disabled={!selectedPanel}
             />
           </CardContent>
         </Card>
