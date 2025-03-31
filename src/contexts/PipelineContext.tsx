@@ -1,10 +1,10 @@
-
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { PipelinePanel, PipelineContextType, NarrationType, NarrationFormat, VoiceType } from './pipeline/types';
 import { processPanel as processPanelOperation, 
          generateNarration as generateNarrationOperation,
          generateAudio as generateAudioOperation,
          updatePanelNarration as updatePanelNarrationOperation } from './pipeline/pipelineOperations';
+import { isDebugMode } from '@/utils/debugUtils';
 
 const PipelineContext = createContext<PipelineContextType | undefined>(undefined);
 
@@ -14,9 +14,21 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [narrationTone, setNarrationTone] = useState<NarrationType>('anime drama');
   const [narrationFormat, setNarrationFormat] = useState<NarrationFormat>('narrative prose');
   const [voiceType, setVoiceType] = useState<VoiceType>('male');
+  const [debugMode, setDebugMode] = useState<boolean>(isDebugMode());
+
+  useEffect(() => {
+    const checkDebugMode = () => {
+      setDebugMode(isDebugMode());
+    };
+    
+    window.addEventListener('storage', checkDebugMode);
+    return () => {
+      window.removeEventListener('storage', checkDebugMode);
+    };
+  }, []);
 
   const processPanel = async (panelId: string) => {
-    await processPanelOperation(panelId);
+    await processPanelOperation(panelId, selectedPanels, setSelectedPanels);
   };
 
   const generateNarration = async (panelId: string) => {
@@ -68,7 +80,9 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
       processPanel,
       generateNarration,
       generateAudio,
-      updatePanelNarration
+      updatePanelNarration,
+      debugMode,
+      setDebugMode
     }}>
       {children}
     </PipelineContext.Provider>
@@ -83,6 +97,4 @@ export const usePipeline = () => {
   return context;
 };
 
-// Re-export types with "export type" for proper TypeScript behavior with isolatedModules
 export type { PipelinePanel, NarrationType, NarrationFormat, VoiceType } from './pipeline/types';
-

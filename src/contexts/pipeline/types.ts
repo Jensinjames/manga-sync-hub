@@ -5,6 +5,30 @@ export type NarrationType = 'anime drama' | 'noir' | 'shonen epic' | 'comedic du
 export type NarrationFormat = 'narrative prose' | 'screenplay-style';
 export type VoiceType = 'male' | 'female' | 'neutral';
 
+export interface PanelLabel {
+  label: string;
+  confidence: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface PanelMetadata {
+  labels?: PanelLabel[];
+  imageHash?: string;
+  content?: string;
+  scene_type?: string;
+  character_count?: number;
+  mood?: string;
+  action_level?: string;
+  processed_at?: string;
+  error?: string;
+  error_timestamp?: string;
+}
+
+export type PanelStatus = 'idle' | 'processing' | 'error' | 'done';
+
 export interface PipelinePanel extends MangaPanel {
   narration?: string;
   narrationTone?: NarrationType;
@@ -14,12 +38,15 @@ export interface PipelinePanel extends MangaPanel {
   isProcessing?: boolean;
   isError?: boolean;
   errorMessage?: string;
-  metadata?: any;
+  metadata?: PanelMetadata;
   content?: string;
   sceneType?: string;
   characterCount?: number;
   mood?: string;
   actionLevel?: string;
+  status?: PanelStatus;
+  lastProcessedAt?: string;
+  debugOverlay?: PanelLabel[];
 }
 
 export interface PipelineContextType {
@@ -37,4 +64,6 @@ export interface PipelineContextType {
   generateNarration: (panelId: string) => Promise<void>;
   generateAudio: (panelId: string) => Promise<void>;
   updatePanelNarration: (panelId: string, narration: string) => void;
+  debugMode: boolean;
+  setDebugMode: React.Dispatch<React.SetStateAction<boolean>>;
 }
