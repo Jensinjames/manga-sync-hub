@@ -78,6 +78,16 @@ serve(async (req) => {
     
     try {
       // First API call to initiate the process
+      console.log("Initiating API request with payload:", JSON.stringify({
+        data: [
+          { path: imageUrl },
+          model,
+          0,
+          0,
+          true
+        ]
+      }));
+      
       const submitRes = await fetch("https://jensin-manga109-yolo.hf.space/gradio_api/call/_gr_detect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,70 +103,127 @@ serve(async (req) => {
       });
 
       if (!submitRes.ok) {
-        throw new Error(`API returned ${submitRes.status}: ${await submitRes.text()}`);
+        const errorText = await submitRes.text();
+        console.error(`API initialization failed with status ${submitRes.status}: ${errorText}`);
+        throw new Error(`API returned ${submitRes.status}: ${errorText}`);
       }
 
-      const submitJson = await submitRes.json();
-      const eventId = submitJson.event_id;
-
-      if (!eventId) {
-        throw new Error("Failed to initiate processing - no event ID returned");
+      const submitText = await submitRes.text();
+      let submitJson;
+      let eventId;
+      
+      try {
+        submitJson = JSON.parse(submitText);
+        eventId = submitJson.event_id;
+        
+        if (!eventId) {
+          throw new Error("No event ID in response");
+        }
+        
+        console.log(`Successfully initiated processing with event ID: ${eventId}`);
+      } catch (parseError) {
+        console.error("Failed to parse initialization response:", parseError.message);
+        console.log("Response text:", submitText);
+        
+        // Try to extract event_id from SSE format if present
+        const eventIdMatch = submitText.match(/data: .*"event_id"\s*:\s*"([^"]+)"/);
+        if (eventIdMatch && eventIdMatch[1]) {
+          eventId = eventIdMatch[1];
+          console.log(`Extracted event ID from SSE: ${eventId}`);
+        } else {
+          throw new Error("Failed to get event ID from response");
+        }
       }
 
       // Polling for results
       let labels = [];
-      const maxRetries = 10;
+      const maxRetries = 12;
       let resultData = null;
 
       for (let i = 0; i < maxRetries; i++) {
         console.log(`Polling for results, attempt ${i + 1}/${maxRetries}`);
-        const resultRes = await fetch(`https://jensin-manga109-yolo.hf.space/gradio_api/call/_gr_detect/${eventId}`);
         
-        if (!resultRes.ok) {
-          console.log(`Polling attempt ${i + 1} failed with status ${resultRes.status}`);
-          await new Promise(r => setTimeout(r, 1000));
-          continue;
-        }
-
-        const responseText = await resultRes.text();
-        
-        // Check if the response is valid JSON
         try {
-          resultData = JSON.parse(responseText);
-          // Extract labels from the response
-          labels = resultData.data?.[0]?.annotations ?? [];
+          const resultRes = await fetch(`https://jensin-manga109-yolo.hf.space/gradio_api/call/_gr_detect/${eventId}`);
           
-          if (labels.length > 0) {
-            console.log(`Successfully retrieved ${labels.length} labels`);
-            break;
+          if (!resultRes.ok) {
+            console.log(`Polling attempt ${i + 1} failed with status ${resultRes.status}`);
+            await new Promise(r => setTimeout(r, 1500));
+            continue;
           }
-        } catch (parseError) {
-          console.log(`Failed to parse JSON: ${parseError.message}`);
-          console.log(`Response starts with: ${responseText.substring(0, 100)}`);
+
+          const responseText = await resultRes.text();
+          console.log(`Response length: ${responseText.length} characters`);
           
-          // Handle server-sent events format
-          if (responseText.includes('event:')) {
-            console.log('Response appears to be in server-sent events format, attempting to extract data');
-            try {
-              // Simple SSE parsing to extract the data field
-              const dataMatch = responseText.match(/data: (\{.*\})/m);
-              if (dataMatch && dataMatch[1]) {
-                const eventData = JSON.parse(dataMatch[1]);
-                if (eventData.data && eventData.data[0] && eventData.data[0].annotations) {
-                  labels = eventData.data[0].annotations;
-                  console.log(`Successfully extracted ${labels.length} labels from SSE format`);
-                  break;
+          if (responseText.trim().length === 0) {
+            console.log("Empty response, retrying...");
+            await new Promise(r => setTimeout(r, 1500));
+            continue;
+          }
+          
+          // Check if the response is valid JSON
+          try {
+            resultData = JSON.parse(responseText);
+            // Extract labels from the response
+            labels = resultData.data?.[0]?.annotations ?? [];
+            
+            if (labels.length > 0) {
+              console.log(`Successfully retrieved ${labels.length} labels`);
+              break;
+            } else {
+              console.log("No labels found in JSON response, will retry");
+            }
+          } catch (parseError) {
+            console.log(`Failed to parse JSON: ${parseError.message}`);
+            console.log(`Response sample: ${responseText.substring(0, 200)}`);
+            
+            // Handle server-sent events format
+            if (responseText.includes('event:')) {
+              console.log('Response appears to be in server-sent events format, attempting to extract data');
+              try {
+                // Simple SSE parsing to extract the data field
+                const dataMatches = responseText.match(/data: (\{.*\})/gm);
+                if (dataMatches && dataMatches.length > 0) {
+                  // Try to find a valid data match with annotations
+                  for (const dataMatch of dataMatches) {
+                    try {
+                      const extractedData = dataMatch.replace('data: ', '');
+                      const eventData = JSON.parse(extractedData);
+                      if (eventData.data && eventData.data[0] && eventData.data[0].annotations) {
+                        labels = eventData.data[0].annotations;
+                        console.log(`Successfully extracted ${labels.length} labels from SSE format`);
+                        break;
+                      }
+                    } catch (innerError) {
+                      console.log(`Failed to parse individual SSE data entry: ${innerError.message}`);
+                    }
+                  }
+                  
+                  if (labels.length > 0) {
+                    break;
+                  }
+                } else {
+                  console.log("No data matches found in SSE format");
                 }
+              } catch (sseError) {
+                console.log(`Failed to parse SSE data: ${sseError.message}`);
               }
-            } catch (sseError) {
-              console.log(`Failed to parse SSE data: ${sseError.message}`);
+            } else if (responseText.includes('error') && responseText.includes('Processing')) {
+              console.log("Model is still processing, will retry");
             }
           }
-        }
-        
-        // Wait before retrying
-        if (i < maxRetries - 1) {
-          await new Promise(r => setTimeout(r, 1500)); // wait 1.5s before retry
+          
+          // Wait before retrying with increasing backoff
+          if (i < maxRetries - 1) {
+            const delay = Math.min(1500 * (i + 1), 8000); // Exponential backoff capped at 8 seconds
+            console.log(`Waiting ${delay}ms before next retry`);
+            await new Promise(r => setTimeout(r, delay));
+          }
+        } catch (fetchError) {
+          console.error(`Network error during polling attempt ${i + 1}: ${fetchError.message}`);
+          if (i < maxRetries - 1) {
+            await new Promise(r => setTimeout(r, 2000));
+          }
         }
       }
       
