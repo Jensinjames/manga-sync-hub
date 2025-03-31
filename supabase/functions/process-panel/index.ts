@@ -38,7 +38,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // Generate a simple hash of the image URL for caching
-    const hashImageUrl = (url) => {
+    const hashImageUrl = (url: string) => {
       let hash = 0;
       for (let i = 0; i < url.length; i++) {
         const char = url.charCodeAt(i);
@@ -92,6 +92,10 @@ serve(async (req) => {
         })
       });
 
+      if (!submitRes.ok) {
+        throw new Error(`API returned ${submitRes.status}: ${await submitRes.text()}`);
+      }
+
       const submitJson = await submitRes.json();
       const eventId = submitJson.event_id;
 
@@ -101,21 +105,64 @@ serve(async (req) => {
 
       // Polling for results
       let labels = [];
-      const maxRetries = 5;
+      const maxRetries = 10;
+      let resultData = null;
+
       for (let i = 0; i < maxRetries; i++) {
         console.log(`Polling for results, attempt ${i + 1}/${maxRetries}`);
         const resultRes = await fetch(`https://jensin-manga109-yolo.hf.space/gradio_api/call/_gr_detect/${eventId}`);
-        const resultData = await resultRes.json();
         
-        // Extract labels from the response
-        labels = resultData.data?.[0]?.annotations ?? [];
+        if (!resultRes.ok) {
+          console.log(`Polling attempt ${i + 1} failed with status ${resultRes.status}`);
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
 
-        if (labels.length > 0) break;
+        const responseText = await resultRes.text();
+        
+        // Check if the response is valid JSON
+        try {
+          resultData = JSON.parse(responseText);
+          // Extract labels from the response
+          labels = resultData.data?.[0]?.annotations ?? [];
+          
+          if (labels.length > 0) {
+            console.log(`Successfully retrieved ${labels.length} labels`);
+            break;
+          }
+        } catch (parseError) {
+          console.log(`Failed to parse JSON: ${parseError.message}`);
+          console.log(`Response starts with: ${responseText.substring(0, 100)}`);
+          
+          // Handle server-sent events format
+          if (responseText.includes('event:')) {
+            console.log('Response appears to be in server-sent events format, attempting to extract data');
+            try {
+              // Simple SSE parsing to extract the data field
+              const dataMatch = responseText.match(/data: (\{.*\})/m);
+              if (dataMatch && dataMatch[1]) {
+                const eventData = JSON.parse(dataMatch[1]);
+                if (eventData.data && eventData.data[0] && eventData.data[0].annotations) {
+                  labels = eventData.data[0].annotations;
+                  console.log(`Successfully extracted ${labels.length} labels from SSE format`);
+                  break;
+                }
+              }
+            } catch (sseError) {
+              console.log(`Failed to parse SSE data: ${sseError.message}`);
+            }
+          }
+        }
         
         // Wait before retrying
         if (i < maxRetries - 1) {
-          await new Promise(r => setTimeout(r, 1000)); // wait 1s before retry
+          await new Promise(r => setTimeout(r, 1500)); // wait 1.5s before retry
         }
+      }
+      
+      if (!labels || labels.length === 0) {
+        console.log("No labels found after multiple attempts");
+        labels = [];
       }
       
       // Normalize the label format and additional metadata
@@ -184,7 +231,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       { 
-        status: 400, 
+        status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
