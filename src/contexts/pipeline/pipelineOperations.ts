@@ -43,6 +43,8 @@ export const loadResources = async () => {
   }
 };
 
+// Export the MangaVisionClient class so it's accessible in other modules
+export { MangaVisionClient };
 export { processPanel };
 export { generateNarration, updatePanelNarration };
 export { generateAudio };

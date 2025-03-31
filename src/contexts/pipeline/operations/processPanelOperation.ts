@@ -11,7 +11,7 @@ import {
 import { updatePanelWithProcessingStatus } from './utils/panelProcessingUtils';
 import { callProcessPanelFunction } from './api/panelEdgeFunctionClient';
 import { pollProcessingStatus } from './polling/pollProcessingStatus';
-import { getMangaVisionClient } from '../pipelineOperations';
+import { getMangaVisionClient, MangaVisionClient } from '../pipelineOperations';
 import { MangaVisionTransformer } from '@/utils/mangaVisionTransformer';
 
 // Simple URL hash function for caching
