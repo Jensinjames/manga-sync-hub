@@ -13,7 +13,9 @@ export const createPanelJob = async (
   metadata: any = {}
 ): Promise<string | null> => {
   try {
-    const { data, error } = await supabase
+    // Use type assertion with 'any' to bypass TypeScript's type checking for tables
+    // that aren't in the generated types yet
+    const { data, error } = await (supabase as any)
       .from('panel_jobs')
       .insert({
         panel_id: panelId,
@@ -58,7 +60,8 @@ export const updatePanelJob = async (
       updateData.error_message = details.error_message;
     }
     
-    const { error } = await supabase
+    // Use type assertion with 'any' to bypass TypeScript's type checking
+    const { error } = await (supabase as any)
       .from('panel_jobs')
       .update(updateData)
       .eq('id', jobId);
@@ -177,7 +180,8 @@ export const getPanelMetadata = async (
 // Get jobs for a specific panel
 export const getPanelJobs = async (panelId: string): Promise<any[]> => {
   try {
-    const { data, error } = await supabase
+    // Use type assertion with 'any' to bypass TypeScript's type checking
+    const { data, error } = await (supabase as any)
       .from('panel_jobs')
       .select('*')
       .eq('panel_id', panelId)
