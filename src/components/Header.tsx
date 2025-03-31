@@ -1,10 +1,13 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useProject } from '@/contexts/ProjectContext';
-import { Upload, Eye, Download, RotateCcw, Save, FileText } from 'lucide-react';
+import { Upload, Eye, Download, RotateCcw, Save, FileText, Bug } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { isDebugMode, toggleDebugMode } from '@/utils/debugUtils';
+
 export const Header = () => {
   const {
     project,
@@ -16,12 +19,15 @@ export const Header = () => {
     autoSave
   } = useProject();
   const [projectName, setProjectName] = useState(project.name);
+  const [debugMode, setDebugMode] = useState(isDebugMode());
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const handleImportClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
+
   const handleImportChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -37,9 +43,11 @@ export const Header = () => {
       }
     }
   };
+
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProjectName(e.target.value);
   };
+
   const handleNameBlur = () => {
     if (projectName !== project.name) {
       setProject({
@@ -49,17 +57,27 @@ export const Header = () => {
       toast.success('Project name updated');
     }
   };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.currentTarget.blur();
     }
   };
+
   const handleManualSave = () => {
     autoSave();
   };
+
   const handleExportPDF = () => {
     exportToPDF();
   };
+
+  const handleToggleDebugMode = () => {
+    const newMode = toggleDebugMode();
+    setDebugMode(newMode);
+    toast.info(`Debug mode ${newMode ? 'enabled' : 'disabled'}`);
+  };
+
   return <header className="bg-manga-dark border-b border-manga-darker flex justify-between items-center py-[3px] px-0 mx-0">
       <div className="flex items-center gap-3 py-0 rounded px-[2px] mx-[3px] my-0">
         <h1 className="text-2xl font-bold text-blue-500">MangaSync Solo</h1>
@@ -86,6 +104,12 @@ export const Header = () => {
         </Button>
         <Button variant="outline" onClick={resetProject} className="text-zinc-950">
           <RotateCcw className="mr-2 h-4 w-4" /> Reset
+        </Button>
+        <Button 
+          variant={debugMode ? "default" : "outline"} 
+          onClick={handleToggleDebugMode} 
+          className={`${debugMode ? "bg-amber-600 text-white" : "text-slate-950"}`}>
+          <Bug className="mr-2 h-4 w-4" /> Debug
         </Button>
       </div>
     </header>;
