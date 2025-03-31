@@ -60,31 +60,31 @@ export const Header = () => {
   const handleExportPDF = () => {
     exportToPDF();
   };
-  return <header className="bg-manga-dark border-b border-manga-darker px-6 py-4 flex justify-between items-center">
-      <div className="flex items-center gap-3">
+  return <header className="bg-manga-dark border-b border-manga-darker flex justify-between items-center py-[3px] px-0 mx-0">
+      <div className="flex items-center gap-3 py-0 rounded px-[2px] mx-[3px] my-0">
         <h1 className="text-2xl font-bold text-blue-500">MangaSync Solo</h1>
         <Input value={projectName} onChange={handleNameChange} onBlur={handleNameBlur} onKeyDown={handleKeyDown} className="max-w-[240px] bg-manga-darker text-white border-manga-darker focus:border-manga-primary" />
       </div>
-      <div className="flex gap-3 bg-slate-900">
+      <div className="flex gap-3 bg-slate-900 rounded-sm py-0 my-0 mx-0 px-0">
         <input type="file" ref={fileInputRef} onChange={handleImportChange} accept=".json" className="hidden" />
-        <Button variant="outline" onClick={handleManualSave}>
+        <Button variant="outline" onClick={handleManualSave} className="bg-slate-950 hover:bg-slate-800 text-sm rounded-sm px-[7px] py-px mx-[6px] text-center font-thin my-0">
           <Save className="mr-2 h-4 w-4" /> Save
         </Button>
-        <Button variant="outline" onClick={handleImportClick}>
+        <Button variant="outline" onClick={handleImportClick} className="text-slate-950">
           <Upload className="mr-2 h-4 w-4" /> Import
         </Button>
         <Link to="/export">
-          <Button variant="outline">
+          <Button variant="outline" className="text-slate-950">
             <Eye className="mr-2 h-4 w-4" /> Preview
           </Button>
         </Link>
-        <Button variant="outline" onClick={exportProject}>
+        <Button variant="outline" onClick={exportProject} className="text-slate-950">
           <Download className="mr-2 h-4 w-4" /> Export JSON
         </Button>
-        <Button variant="outline" onClick={handleExportPDF}>
+        <Button variant="outline" onClick={handleExportPDF} className="font-normal text-slate-950">
           <FileText className="mr-2 h-4 w-4" /> Export PDF
         </Button>
-        <Button variant="outline" onClick={resetProject}>
+        <Button variant="outline" onClick={resetProject} className="text-zinc-950">
           <RotateCcw className="mr-2 h-4 w-4" /> Reset
         </Button>
       </div>
