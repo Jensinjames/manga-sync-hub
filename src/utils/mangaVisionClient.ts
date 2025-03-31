@@ -49,8 +49,8 @@ export class MangaVisionClient {
     if (this.client) return this.client;
     
     if (!this.connectionPromise) {
-      // Fix: Pass just the space name with no additional options parameter
-      this.connectionPromise = GradioClient.client(this.config.spaceName).then(client => {
+      // Fixed: Pass both the space name and an empty options object to match the expected parameters
+      this.connectionPromise = GradioClient.client(this.config.spaceName, {}).then(client => {
         this.client = client;
         return client;
       });
