@@ -1,9 +1,15 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Wand2, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Play, Bug, Cog, Globe } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { usePipeline } from '@/contexts/PipelineContext';
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ProcessorHeaderProps {
   debugMode: boolean;
@@ -20,38 +26,72 @@ export const ProcessorHeader: React.FC<ProcessorHeaderProps> = ({
   processingAll,
   hasPanels
 }) => {
+  const { useClientSideProcessing, setUseClientSideProcessing } = usePipeline();
+
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div>
-        <h2 className="text-2xl font-semibold text-white mb-1">Process Images</h2>
-        <p className="text-gray-400">AI analyzes each panel to understand context, characters, and action</p>
+        <h2 className="text-xl font-semibold text-white">Process Manga Panels</h2>
+        <p className="text-gray-400">Analyze panel content using AI to prepare for narration</p>
       </div>
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="flex items-center space-x-2">
-          <Switch 
-            id="debug-mode" 
-            checked={debugMode}
-            onCheckedChange={toggleDebugMode}
-          />
-          <Label htmlFor="debug-mode" className="text-white">
-            {debugMode ? 
-              <span className="flex items-center gap-1"><Eye size={16} /> Debug Mode</span> : 
-              <span className="flex items-center gap-1"><EyeOff size={16} /> Debug Mode</span>
-            }
-          </Label>
-        </div>
-        <Button 
-          onClick={handleProcessAll} 
-          className="bg-manga-primary hover:bg-manga-primary/80 text-white flex items-center gap-2"
+      
+      <div className="flex flex-wrap items-center gap-3">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="client-side-mode"
+                  checked={useClientSideProcessing}
+                  onCheckedChange={setUseClientSideProcessing}
+                />
+                <label htmlFor="client-side-mode" className="text-sm cursor-pointer">
+                  <Globe className="inline-block mr-1 h-4 w-4" />
+                  Client Processing
+                </label>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Process panels in the browser instead of using the server</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="debug-mode"
+                  checked={debugMode}
+                  onCheckedChange={toggleDebugMode}
+                />
+                <label htmlFor="debug-mode" className="text-sm cursor-pointer">
+                  <Bug className="inline-block mr-1 h-4 w-4" />
+                  Debug Mode
+                </label>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Show detailed debugging information</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <Button
+          onClick={handleProcessAll}
           disabled={processingAll || !hasPanels}
+          className="bg-manga-primary hover:bg-manga-primary/80"
         >
           {processingAll ? (
             <>
-              <Loader2 size={18} className="animate-spin" /> Processing...
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
             </>
           ) : (
             <>
-              <Wand2 size={18} /> Process All Images
+              <Play className="mr-2 h-4 w-4" />
+              Process All
             </>
           )}
         </Button>

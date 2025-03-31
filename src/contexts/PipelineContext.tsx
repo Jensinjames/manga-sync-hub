@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { PipelinePanel, PipelineContextType, NarrationType, NarrationFormat, VoiceType } from './pipeline/types';
 import { processPanel as processPanelOperation, 
@@ -20,6 +19,7 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [voiceType, setVoiceType] = useState<VoiceType>('male');
   const [debugMode, setDebugMode] = useState<boolean>(isDebugMode());
   const [jobsRunning, setJobsRunning] = useState<Record<string, boolean>>({});
+  const [useClientSideProcessing, setUseClientSideProcessing] = useState<boolean>(false);
 
   useEffect(() => {
     const checkDebugMode = () => {
@@ -32,11 +32,22 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
   }, []);
 
+  useEffect(() => {
+    const savedPreference = localStorage.getItem('useClientSideProcessing');
+    if (savedPreference !== null) {
+      setUseClientSideProcessing(savedPreference === 'true');
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('useClientSideProcessing', useClientSideProcessing.toString());
+  }, [useClientSideProcessing]);
+
   const processPanel = async (panelId: string) => {
     // Track job status
     setJobsRunning(prev => ({ ...prev, [panelId]: true }));
     try {
-      await processPanelOperation(panelId, selectedPanels, setSelectedPanels);
+      await processPanelOperation(panelId, selectedPanels, setSelectedPanels, useClientSideProcessing);
     } finally {
       setJobsRunning(prev => ({ ...prev, [panelId]: false }));
     }
@@ -105,7 +116,9 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
     updatePanelNarration,
     debugMode,
     setDebugMode,
-    jobsRunning
+    jobsRunning,
+    useClientSideProcessing,
+    setUseClientSideProcessing
   };
 
   return (

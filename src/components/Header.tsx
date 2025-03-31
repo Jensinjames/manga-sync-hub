@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useProject } from '@/contexts/ProjectContext';
-import { Upload, Eye, Download, RotateCcw, Save, FileText, Bug } from 'lucide-react';
+import { Upload, Eye, Download, RotateCcw, Save, FileText, Bug, Globe, Server } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { isDebugMode, toggleDebugMode } from '@/utils/debugUtils';
+import { usePipeline } from '@/contexts/PipelineContext';
+
 export const Header = () => {
   const {
     project,
@@ -16,14 +18,19 @@ export const Header = () => {
     resetProject,
     autoSave
   } = useProject();
+  
+  const pipelineContext = React.useContext(React.createContext(null));
+  
   const [projectName, setProjectName] = useState(project.name);
   const [debugMode, setDebugMode] = useState(isDebugMode());
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
   const handleImportClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
+  
   const handleImportChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -39,9 +46,11 @@ export const Header = () => {
       }
     }
   };
+  
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProjectName(e.target.value);
   };
+  
   const handleNameBlur = () => {
     if (projectName !== project.name) {
       setProject({
@@ -51,26 +60,47 @@ export const Header = () => {
       toast.success('Project name updated');
     }
   };
+  
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.currentTarget.blur();
     }
   };
+  
   const handleManualSave = () => {
     autoSave();
   };
+  
   const handleExportPDF = () => {
     exportToPDF();
   };
+  
   const handleToggleDebugMode = () => {
     const newMode = toggleDebugMode();
     setDebugMode(newMode);
     toast.info(`Debug mode ${newMode ? 'enabled' : 'disabled'}`);
   };
+  
+  let clientSideProcessingMode = false;
+  if (pipelineContext) {
+    try {
+      const { useClientSideProcessing } = usePipeline();
+      clientSideProcessingMode = useClientSideProcessing;
+    } catch (error) {
+    }
+  }
+  
   return <header className="bg-manga-dark border-b border-manga-darker flex justify-between items-center px-0 rounded mx-px py-0 my-0">
       <div className="flex items-center gap-3 rounded py-0 my-[18px] px-[2px] mx-0">
         <h1 className="text-2xl font-bold text-blue-500 mx-0 py-0 px-0 my-0">MangaSync Solo</h1>
         <Input value={projectName} onChange={handleNameChange} onBlur={handleNameBlur} onKeyDown={handleKeyDown} className="max-w-[240px] bg-manga-darker text-white border-manga-darker focus:border-manga-primary" />
+        
+        {clientSideProcessingMode && (
+          <div className="flex items-center text-xs px-2 py-1 bg-amber-800/30 text-amber-300 rounded-sm">
+            <Globe className="mr-1 h-3 w-3" />
+            Client-side
+          </div>
+        )}
       </div>
       <div className="flex gap-3 px-0 bg-indigo-200 py-[6px] my-[7px] mx-px rounded-sm">
         <input type="file" ref={fileInputRef} onChange={handleImportChange} accept=".json" className="hidden" />

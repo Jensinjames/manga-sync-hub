@@ -68,4 +68,6 @@ export interface PipelineContextType {
   debugMode: boolean;
   setDebugMode: React.Dispatch<React.SetStateAction<boolean>>;
   jobsRunning: Record<string, boolean>;
+  useClientSideProcessing: boolean;
+  setUseClientSideProcessing: React.Dispatch<React.SetStateAction<boolean>>;
 }
