@@ -7,6 +7,7 @@ interface TimelineSortResult {
   status: string;
   sorted: Array<{id: string; duration: number}>;
   valid: boolean;
+  error?: string; // Add error as optional property
 }
 
 interface ProjectValidationResult {
