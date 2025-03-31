@@ -26,16 +26,16 @@ export const pollProcessingStatus = async (
       if (panelIndex === -1) break; // Panel was removed, stop polling
       
       // Query the database using the Edge Function proxy
-      const data = await getPanelMetadata(panelId);
+      const response = await getPanelMetadata(panelId);
       
-      // Check if metadata exists
-      if (!data?.metadata) {
+      if (!response || !response.data) {
+        console.log("No metadata found, will retry", response);
         retryCount++;
         continue;
       }
       
       // Convert the metadata to a strongly typed object
-      const metadata = convertToMetadata(data.metadata);
+      const metadata = convertToMetadata(response.data.metadata || response.data);
       
       // Check if processing is complete
       if (metadata.processing !== true) {
@@ -66,6 +66,8 @@ export const pollProcessingStatus = async (
         } else {
           toast.success('Panel processing completed');
         }
+      } else {
+        console.log("Panel is still processing, will retry");
       }
       
       retryCount++;

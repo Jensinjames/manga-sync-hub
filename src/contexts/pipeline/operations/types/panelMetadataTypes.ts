@@ -49,19 +49,22 @@ export const convertToMetadata = (data: Json): PanelMetadata => {
   
   const metadata: PanelMetadata = {};
   
+  // Handle direct metadata object or metadata nested in a property
+  const metadataSource = data.metadata || data;
+  
   // Safely assign each property with appropriate type checking
-  if (typeof data.processing === 'boolean') metadata.processing = data.processing;
-  if (typeof data.error === 'string') metadata.error = data.error;
-  if (typeof data.content === 'string') metadata.content = data.content;
-  if (typeof data.scene_type === 'string') metadata.scene_type = data.scene_type;
-  if (typeof data.character_count === 'number') metadata.character_count = data.character_count;
-  if (typeof data.mood === 'string') metadata.mood = data.mood;
-  if (typeof data.action_level === 'string') metadata.action_level = data.action_level;
-  if (typeof data.processed_at === 'string') metadata.processed_at = data.processed_at;
-  if (typeof data.imageHash === 'string') metadata.imageHash = data.imageHash;
+  if (typeof metadataSource.processing === 'boolean') metadata.processing = metadataSource.processing;
+  if (typeof metadataSource.error === 'string') metadata.error = metadataSource.error;
+  if (typeof metadataSource.content === 'string') metadata.content = metadataSource.content;
+  if (typeof metadataSource.scene_type === 'string') metadata.scene_type = metadataSource.scene_type;
+  if (typeof metadataSource.character_count === 'number') metadata.character_count = metadataSource.character_count;
+  if (typeof metadataSource.mood === 'string') metadata.mood = metadataSource.mood;
+  if (typeof metadataSource.action_level === 'string') metadata.action_level = metadataSource.action_level;
+  if (typeof metadataSource.processed_at === 'string') metadata.processed_at = metadataSource.processed_at;
+  if (typeof metadataSource.imageHash === 'string') metadata.imageHash = metadataSource.imageHash;
   
   // Handle the labels array specially
-  if (Array.isArray(data.labels)) metadata.labels = data.labels;
+  if (Array.isArray(metadataSource.labels)) metadata.labels = metadataSource.labels;
   
   return metadata;
 };

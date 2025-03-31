@@ -49,16 +49,25 @@ export const getPanelMetadata = async (
 ): Promise<any> => {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
+      console.log(`Fetching metadata for panel ${panelId}, attempt ${attempt + 1}`);
       const { data, error } = await supabase.functions.invoke('get-panel-metadata', {
         body: {
           panelId
         }
       });
       
-      if (error) throw error;
-      if (!data) throw new Error('Invalid response from edge function');
+      if (error) {
+        console.error(`Error fetching metadata: ${error.message}`);
+        throw error;
+      }
       
-      return data.data;
+      if (!data) {
+        console.error('No data returned from edge function');
+        throw new Error('Invalid response from edge function');
+      }
+      
+      console.log('Metadata fetch successful:', data);
+      return data;
     } catch (err) {
       console.error(`Attempt ${attempt + 1} failed:`, err);
       

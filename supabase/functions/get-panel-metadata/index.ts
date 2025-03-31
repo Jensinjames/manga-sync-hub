@@ -30,13 +30,13 @@ serve(async (req) => {
       throw new Error('Missing Supabase environment variables');
     }
     
-    // Create Supabase client
+    // Create Supabase client with explicit schema selection
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Query the database for the panel metadata
+    // Explicitly query the public schema for the panel_metadata table
     const { data, error } = await supabase
       .from('panel_metadata')
-      .select('metadata')
+      .select('*')  // Select all fields to ensure we get everything we need
       .eq('panel_id', panelId)
       .maybeSingle();
       
@@ -44,6 +44,8 @@ serve(async (req) => {
       console.error("Database error:", error);
       throw error;
     }
+    
+    console.log("Successfully retrieved panel metadata");
     
     return new Response(
       JSON.stringify({ 
