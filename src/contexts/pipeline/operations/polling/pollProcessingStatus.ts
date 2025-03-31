@@ -56,7 +56,10 @@ export const pollProcessingStatus = async (
           isProcessing: false,
           isError: errorHasLength(metadata.error),
           status: errorHasLength(metadata.error) ? 'error' : 'done',
-          metadata: metadata,
+          metadata: {
+            ...(metadata as any), // Type assertion to avoid incompatible labels
+            labels: pipelineLabels // Use the converted labels that match PanelLabel[]
+          },
           content: metadata.content,
           sceneType: metadata.scene_type,
           characterCount: metadata.character_count,

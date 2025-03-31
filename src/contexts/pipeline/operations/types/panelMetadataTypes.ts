@@ -1,6 +1,6 @@
 
 import { Json } from '@/integrations/supabase/types';
-import { PanelLabel } from '@/contexts/pipeline/types';
+import { PanelLabel, PanelMetadata as PipelinePanelMetadata } from '@/contexts/pipeline/types';
 
 // Define the structure of a panel metadata record as returned from the database
 export interface PanelMetadataRecord {
@@ -157,15 +157,15 @@ export const convertToMetadata = (data: any): PanelMetadata => {
 
 // Convert the PanelMetadata labels to PanelLabel format for pipeline usage
 export const convertLabelsForPipeline = (metadata: PanelMetadata): PanelLabel[] | undefined => {
-  if (!metadata.labels) return undefined;
+  if (!metadata.labels || !Array.isArray(metadata.labels)) return undefined;
   
   return metadata.labels.map(label => ({
-    label: label.class,
-    confidence: label.confidence,
-    x: label.x1,
-    y: label.y1,
-    width: label.x2 - label.x1,
-    height: label.y2 - label.y1
+    label: label.class || 'unknown',
+    confidence: label.confidence || 0,
+    x: label.x1 || 0,
+    y: label.y1 || 0,
+    width: (label.x2 || 0) - (label.x1 || 0),
+    height: (label.y2 || 0) - (label.y1 || 0)
   }));
 };
 

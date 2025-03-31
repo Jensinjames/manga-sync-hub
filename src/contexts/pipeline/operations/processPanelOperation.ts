@@ -56,7 +56,10 @@ export const processPanel = async (
       ...resultPanels[panelIndex],
       isProcessing: result.processing === true,
       status: result.processing === true ? 'processing' : 'done',
-      metadata: result,
+      metadata: {
+        ...(result as any),  // Type assertion to avoid incompatible labels
+        labels: pipelineLabels // Use the converted labels that match PanelLabel[]
+      },
       content: result.content,
       sceneType: result.scene_type,
       characterCount: result.character_count,
