@@ -22,7 +22,7 @@ export interface MangaVisionConfig {
 }
 
 export const DEFAULT_CONFIG: MangaVisionConfig = {
-  spaceName: "jensin-manga109-yolo",
+  spaceName: "Jensin/manga109_yolo",
   modelName: "v2023.12.07_n_yv11",
   iouThreshold: 0.7,
   scoreThreshold: 0.25,
