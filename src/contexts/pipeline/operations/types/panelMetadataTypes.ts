@@ -25,12 +25,12 @@ export interface PanelMetadata {
     x2: number;
     y2: number;
   }[];
-  processing?: {
+  processing?: boolean | {
     status: 'pending' | 'processing' | 'completed' | 'failed';
     started_at?: string;
     completed_at?: string;
   };
-  error?: {
+  error?: string | {
     message: string;
     code: string;
     details?: any;
@@ -60,10 +60,14 @@ export const transformMetadata = (rawData: PanelMetadataRecord | null): PanelMet
     // Extract processing status
     if (rawData.metadata.processing && typeof rawData.metadata.processing === 'object') {
       metadata.processing = rawData.metadata.processing;
+    } else if (typeof rawData.metadata.processing === 'boolean') {
+      metadata.processing = rawData.metadata.processing;
     }
     
     // Extract error information
     if (rawData.metadata.error && typeof rawData.metadata.error === 'object') {
+      metadata.error = rawData.metadata.error;
+    } else if (typeof rawData.metadata.error === 'string') {
       metadata.error = rawData.metadata.error;
     }
     
@@ -109,6 +113,43 @@ export const transformMetadata = (rawData: PanelMetadataRecord | null): PanelMet
   if (rawData.character_count) metadata.character_count = rawData.character_count;
   if (rawData.mood) metadata.mood = rawData.mood;
   if (rawData.action_level) metadata.action_level = rawData.action_level;
+  
+  return metadata;
+};
+
+// Convert any data format to a structured PanelMetadata object
+export const convertToMetadata = (data: any): PanelMetadata => {
+  const metadata: PanelMetadata = {};
+  
+  if (!data) return metadata;
+  
+  // Handle labels array if present
+  if (Array.isArray(data.labels)) {
+    metadata.labels = data.labels;
+  }
+  
+  // Handle processing status
+  if (data.processing !== undefined) {
+    metadata.processing = data.processing;
+  }
+  
+  // Handle error information
+  if (data.error) {
+    metadata.error = data.error;
+  }
+  
+  // Map simple string and number properties
+  const stringProps = ['content', 'scene_type', 'mood', 'action_level', 'processed_at', 'imageHash'];
+  stringProps.forEach(prop => {
+    if (data[prop] !== undefined) {
+      metadata[prop as keyof PanelMetadata] = data[prop];
+    }
+  });
+  
+  // Handle character count
+  if (data.character_count !== undefined) {
+    metadata.character_count = Number(data.character_count);
+  }
   
   return metadata;
 };
