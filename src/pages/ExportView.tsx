@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useProject } from '@/contexts/ProjectContext';
 import { Button } from '@/components/ui/button';
@@ -13,10 +14,13 @@ const ExportView = () => {
   const [includeNotes, setIncludeNotes] = useState(true);
   const [includeThumbnails, setIncludeThumbnails] = useState(true);
   
-  // Calculate project statistics
-  const totalPages = project.pages.length;
-  const totalPanels = project.pages.reduce((sum, page) => sum + page.panels.length, 0);
-  const panelsWithNotes = project.pages.reduce(
+  // Ensure project and project.pages exist before using them
+  const pages = project?.pages || [];
+  
+  // Calculate project statistics with null checks
+  const totalPages = pages.length;
+  const totalPanels = pages.reduce((sum, page) => sum + page.panels.length, 0);
+  const panelsWithNotes = pages.reduce(
     (sum, page) => sum + page.panels.filter(panel => 
       panel.notes.camera || panel.notes.fx || panel.notes.audio
     ).length, 
@@ -62,7 +66,7 @@ const ExportView = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <p><span className="text-gray-400">Name:</span> {project.name}</p>
+                  <p><span className="text-gray-400">Name:</span> {project?.name || 'Untitled Project'}</p>
                   <p><span className="text-gray-400">Pages:</span> {totalPages}</p>
                   <p><span className="text-gray-400">Panels:</span> {totalPanels}</p>
                   <p><span className="text-gray-400">Panels with notes:</span> {panelsWithNotes}</p>
