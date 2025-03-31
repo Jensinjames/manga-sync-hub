@@ -64,6 +64,10 @@ export const Header = () => {
   const handleManualSave = () => {
     autoSave();
   };
+  
+  const handleExportPDF = () => {
+    exportToPDF();
+  };
 
   return (
     <header className="bg-manga-dark border-b border-manga-darker px-6 py-4 flex justify-between items-center">
@@ -97,7 +101,7 @@ export const Header = () => {
         <Button variant="outline" onClick={exportProject}>
           <Download className="mr-2 h-4 w-4" /> Export JSON
         </Button>
-        <Button variant="outline" onClick={exportToPDF}>
+        <Button variant="outline" onClick={handleExportPDF}>
           <FileText className="mr-2 h-4 w-4" /> Export PDF
         </Button>
         <Button variant="outline" onClick={resetProject}>
