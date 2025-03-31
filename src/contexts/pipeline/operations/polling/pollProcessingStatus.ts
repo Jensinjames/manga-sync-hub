@@ -24,7 +24,7 @@ export const pollProcessingStatus = async (
       const panelIndex = currentPanels.findIndex(p => p.id === panelId);
       if (panelIndex === -1) break; // Panel was removed, stop polling
       
-      // Query the database for the current status
+      // Query the database for the current status - using the from() method with proper schema
       const { data, error } = await supabase
         .from('panel_metadata')
         .select('metadata')
