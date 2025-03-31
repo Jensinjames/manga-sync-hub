@@ -6,32 +6,52 @@ import { MangaPagesList } from '@/components/MangaPagesList';
 import { PanelWorkspace } from '@/components/PanelWorkspace';
 import { SceneNotes } from '@/components/SceneNotes';
 import { StoryboardTimeline } from '@/components/StoryboardTimeline';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
 const Index = () => {
   return (
     <ProjectProvider>
       <div className="min-h-screen flex flex-col bg-manga-darker text-white">
         <Header />
-        <main className="flex-1 grid grid-cols-12 gap-4 p-4">
-          {/* Left column: Manga Pages */}
-          <div className="col-span-3 bg-manga-dark rounded-lg p-4">
-            <MangaPagesList />
-          </div>
-
-          {/* Middle column: Panel Workspace */}
-          <div className="col-span-6 flex flex-col space-y-4">
-            <div className="bg-manga-dark rounded-lg p-4 flex-1">
-              <PanelWorkspace />
-            </div>
-            <div className="bg-manga-dark rounded-lg p-4">
-              <StoryboardTimeline />
-            </div>
-          </div>
-
-          {/* Right column: Scene Notes */}
-          <div className="col-span-3 bg-manga-dark rounded-lg p-4">
-            <SceneNotes />
-          </div>
+        <main className="flex-1 p-4">
+          <ResizablePanelGroup direction="horizontal" className="min-h-[calc(100vh-80px)]">
+            {/* Left column: Manga Pages */}
+            <ResizablePanel defaultSize={20} minSize={15}>
+              <div className="bg-manga-dark rounded-lg p-4 h-full">
+                <MangaPagesList />
+              </div>
+            </ResizablePanel>
+            
+            <ResizableHandle withHandle />
+            
+            {/* Middle column: Panel Workspace */}
+            <ResizablePanel defaultSize={55}>
+              <ResizablePanelGroup direction="vertical">
+                <ResizablePanel defaultSize={70}>
+                  <div className="bg-manga-dark rounded-lg p-4 h-full">
+                    <PanelWorkspace />
+                  </div>
+                </ResizablePanel>
+                
+                <ResizableHandle withHandle />
+                
+                <ResizablePanel defaultSize={30}>
+                  <div className="bg-manga-dark rounded-lg p-4 h-full">
+                    <StoryboardTimeline />
+                  </div>
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            </ResizablePanel>
+            
+            <ResizableHandle withHandle />
+            
+            {/* Right column: Scene Notes */}
+            <ResizablePanel defaultSize={25} minSize={20}>
+              <div className="bg-manga-dark rounded-lg p-4 h-full">
+                <SceneNotes />
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </main>
       </div>
     </ProjectProvider>

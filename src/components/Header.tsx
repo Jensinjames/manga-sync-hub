@@ -1,13 +1,21 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useProject } from '@/contexts/ProjectContext';
-import { Upload, Eye, Download, RotateCcw } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { 
+  Upload, 
+  Eye, 
+  Download, 
+  RotateCcw, 
+  Save, 
+  FileText
+} from 'lucide-react';
+import { toast } from 'sonner';
 
 export const Header = () => {
-  const { project, importProject, exportProject } = useProject();
-  const { toast } = useToast();
+  const { project, setProject, importProject, exportProject, exportToPDF, resetProject, autoSave } = useProject();
+  const [projectName, setProjectName] = useState(project.name);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleImportClick = () => {
@@ -35,9 +43,42 @@ export const Header = () => {
     }
   };
 
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setProjectName(e.target.value);
+  };
+
+  const handleNameBlur = () => {
+    if (projectName !== project.name) {
+      setProject({
+        ...project,
+        name: projectName
+      });
+      toast.success('Project name updated');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+    }
+  };
+
+  const handleManualSave = () => {
+    autoSave();
+  };
+
   return (
     <header className="bg-manga-dark border-b border-manga-darker px-6 py-4 flex justify-between items-center">
-      <h1 className="text-2xl font-bold text-white">MangaSync 2.0</h1>
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-bold text-white">MangaSync Solo</h1>
+        <Input
+          value={projectName}
+          onChange={handleNameChange}
+          onBlur={handleNameBlur}
+          onKeyDown={handleKeyDown}
+          className="max-w-[240px] bg-manga-darker text-white border-manga-darker focus:border-manga-primary"
+        />
+      </div>
       <div className="flex gap-3">
         <input
           type="file"
@@ -46,6 +87,9 @@ export const Header = () => {
           accept=".json"
           className="hidden"
         />
+        <Button variant="outline" onClick={handleManualSave}>
+          <Save className="mr-2 h-4 w-4" /> Save
+        </Button>
         <Button variant="outline" onClick={handleImportClick}>
           <Upload className="mr-2 h-4 w-4" /> Import
         </Button>
@@ -53,9 +97,12 @@ export const Header = () => {
           <Eye className="mr-2 h-4 w-4" /> Preview
         </Button>
         <Button variant="outline" onClick={exportProject}>
-          <Download className="mr-2 h-4 w-4" /> Export
+          <Download className="mr-2 h-4 w-4" /> Export JSON
         </Button>
-        <Button variant="outline">
+        <Button variant="outline" onClick={exportToPDF}>
+          <FileText className="mr-2 h-4 w-4" /> Export PDF
+        </Button>
+        <Button variant="outline" onClick={resetProject}>
           <RotateCcw className="mr-2 h-4 w-4" /> Reset
         </Button>
       </div>
