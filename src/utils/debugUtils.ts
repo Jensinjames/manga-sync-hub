@@ -3,12 +3,28 @@
  * Utility functions for debugging and testing the application
  */
 
+interface TimelineSortResult {
+  status: string;
+  sorted: Array<{id: string; duration: number}>;
+  valid: boolean;
+}
+
+interface ProjectValidationResult {
+  status: string;
+  hasId?: boolean;
+  hasName?: boolean;
+  hasPages?: boolean;
+  pageCount: number;
+  panelCount: number;
+  valid: boolean;
+}
+
 /**
  * Test the timeline sorting functionality
  * @param panels Array of panels to test sorting on
  * @returns Object with test results
  */
-export const testTimelineSorting = (panels: any[] = []) => {
+export const testTimelineSorting = (panels: any[] = []): TimelineSortResult => {
   if (!panels || panels.length === 0) {
     return {
       status: 'No panels to test',
@@ -53,6 +69,7 @@ export const testTimelineSorting = (panels: any[] = []) => {
     console.error('Error in timeline sorting test:', error);
     return {
       status: 'Error testing timeline',
+      sorted: [],
       error: error instanceof Error ? error.message : String(error),
       valid: false
     };
@@ -64,15 +81,18 @@ export const testTimelineSorting = (panels: any[] = []) => {
  * @param project Project data to validate
  * @returns Object with validation results
  */
-export const validateProjectStructure = (project: any) => {
+export const validateProjectStructure = (project: any): ProjectValidationResult => {
   if (!project) {
     return {
       status: 'Project is undefined',
+      pageCount: 0,
+      panelCount: 0,
       valid: false
     };
   }
   
-  const results = {
+  const results: ProjectValidationResult = {
+    status: 'Project structure validation complete',
     hasId: Boolean(project.id),
     hasName: Boolean(project.name),
     hasPages: Boolean(project.pages && Array.isArray(project.pages)),
@@ -102,7 +122,7 @@ export const validateProjectStructure = (project: any) => {
 /**
  * Debug mode flag
  */
-export const isDebugMode = () => {
+export const isDebugMode = (): boolean => {
   return localStorage.getItem('mangasync-debug-mode') === 'true';
 };
 
@@ -110,7 +130,7 @@ export const isDebugMode = () => {
  * Toggle debug mode
  * @returns New debug mode state
  */
-export const toggleDebugMode = () => {
+export const toggleDebugMode = (): boolean => {
   const currentMode = isDebugMode();
   localStorage.setItem('mangasync-debug-mode', currentMode ? 'false' : 'true');
   return !currentMode;
