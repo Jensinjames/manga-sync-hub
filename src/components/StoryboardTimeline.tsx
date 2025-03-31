@@ -10,8 +10,11 @@ export const StoryboardTimeline = () => {
   const { project, selectedPanel, selectPanel, updatePanelTimeCode } = useProject();
   const [isPlaying, setIsPlaying] = useState(false);
 
+  // Ensure project and project.pages exist before using them
+  const pages = project?.pages || [];
+
   // Collect all panels across all pages
-  const allPanels = project.pages.flatMap(page => 
+  const allPanels = pages.flatMap(page => 
     page.panels.map(panel => ({
       ...panel,
       pageId: page.id

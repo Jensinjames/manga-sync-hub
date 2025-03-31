@@ -39,11 +39,14 @@ export const MangaPagesList = () => {
     }
   };
 
+  // Ensure project and project.pages exist before mapping
+  const pages = project?.pages || [];
+
   return (
     <div className="flex flex-col h-full">
       <h2 className="text-xl font-semibold mb-4 text-white">Manga Pages</h2>
       <div className="space-y-4 overflow-y-auto flex-1">
-        {project.pages.map((page) => (
+        {pages.map((page) => (
           <Card 
             key={page.id} 
             className={`cursor-pointer transition-all hover:ring-2 hover:ring-manga-primary ${
