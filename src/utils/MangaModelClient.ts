@@ -35,7 +35,7 @@ export class MangaModelClient {
   private connectionPromise: Promise<any> | null = null;
 
   constructor(
-    spaceName: string = "jensin-manga109-yolo",
+    spaceName: string = "Jensin/manga109_yolo",
     options?: MangaModelClientOptions
   ) {
     this.spaceName = spaceName;
