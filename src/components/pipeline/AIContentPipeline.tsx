@@ -7,8 +7,12 @@ import { NarrationEditor } from './NarrationEditor';
 import { AudioPreview } from './AudioPreview';
 import { ExportOptions } from './ExportOptions';
 import { Card } from '@/components/ui/card';
+import { usePipeline } from '@/contexts/PipelineContext';
 
-export const AIContentPipeline = () => {
+export const AIContentPipeline: React.FC = () => {
+  // Access the pipeline context to verify it's available
+  const pipelineContext = usePipeline();
+  
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-white">Manga AI Transformation Pipeline</h1>
@@ -47,3 +51,5 @@ export const AIContentPipeline = () => {
     </div>
   );
 };
+
+export default AIContentPipeline;

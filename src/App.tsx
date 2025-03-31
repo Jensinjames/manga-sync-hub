@@ -12,7 +12,6 @@ import ExportView from "./pages/ExportView";
 import NotFound from "./pages/NotFound";
 
 const App = () => {
-  // Move the QueryClient initialization inside the component
   const queryClient = new QueryClient();
 
   return (

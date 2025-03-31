@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { PipelinePanel, PipelineContextType, NarrationType, NarrationFormat, VoiceType } from './pipeline/types';
 import { processPanel as processPanelOperation, 
@@ -9,6 +10,9 @@ import { isDebugMode } from '@/utils/debugUtils';
 const PipelineContext = createContext<PipelineContextType | undefined>(undefined);
 
 export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Add console log for debugging
+  console.log('PipelineProvider rendering');
+  
   const [selectedPanels, setSelectedPanels] = useState<PipelinePanel[]>([]);
   const [activePanel, setActivePanel] = useState<PipelinePanel | null>(null);
   const [narrationTone, setNarrationTone] = useState<NarrationType>('anime drama');
@@ -65,25 +69,27 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
     );
   };
 
+  const contextValue = {
+    selectedPanels,
+    setSelectedPanels,
+    activePanel,
+    setActivePanel,
+    narrationTone,
+    setNarrationTone,
+    narrationFormat,
+    setNarrationFormat,
+    voiceType,
+    setVoiceType,
+    processPanel,
+    generateNarration,
+    generateAudio,
+    updatePanelNarration,
+    debugMode,
+    setDebugMode
+  };
+
   return (
-    <PipelineContext.Provider value={{
-      selectedPanels,
-      setSelectedPanels,
-      activePanel,
-      setActivePanel,
-      narrationTone,
-      setNarrationTone,
-      narrationFormat,
-      setNarrationFormat,
-      voiceType,
-      setVoiceType,
-      processPanel,
-      generateNarration,
-      generateAudio,
-      updatePanelNarration,
-      debugMode,
-      setDebugMode
-    }}>
+    <PipelineContext.Provider value={contextValue}>
       {children}
     </PipelineContext.Provider>
   );
@@ -92,6 +98,7 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
 export const usePipeline = () => {
   const context = useContext(PipelineContext);
   if (context === undefined) {
+    console.error('usePipeline was called outside of PipelineProvider');
     throw new Error('usePipeline must be used within a PipelineProvider');
   }
   return context;
