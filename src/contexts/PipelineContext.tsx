@@ -1,43 +1,10 @@
+
 import React, { createContext, useState, useContext, ReactNode } from 'react';
-import { MangaPanel } from '@/types/manga';
-
-export type NarrationType = 'anime drama' | 'noir' | 'shonen epic' | 'comedic dub';
-export type NarrationFormat = 'narrative prose' | 'screenplay-style';
-export type VoiceType = 'male' | 'female' | 'neutral';
-
-export interface PipelinePanel extends MangaPanel {
-  narration?: string;
-  narrationTone?: NarrationType;
-  narrationFormat?: NarrationFormat;
-  voiceType?: VoiceType;
-  audioUrl?: string;
-  isProcessing?: boolean;
-  isError?: boolean;
-  errorMessage?: string;
-  metadata?: any;
-  content?: string;
-  sceneType?: string;
-  characterCount?: number;
-  mood?: string;
-  actionLevel?: string;
-}
-
-interface PipelineContextType {
-  selectedPanels: PipelinePanel[];
-  setSelectedPanels: React.Dispatch<React.SetStateAction<PipelinePanel[]>>;
-  activePanel: PipelinePanel | null;
-  setActivePanel: React.Dispatch<React.SetStateAction<PipelinePanel | null>>;
-  narrationTone: NarrationType;
-  setNarrationTone: React.Dispatch<React.SetStateAction<NarrationType>>;
-  narrationFormat: NarrationFormat;
-  setNarrationFormat: React.Dispatch<React.SetStateAction<NarrationFormat>>;
-  voiceType: VoiceType;
-  setVoiceType: React.Dispatch<React.SetStateAction<VoiceType>>;
-  processPanel: (panelId: string) => Promise<void>;
-  generateNarration: (panelId: string) => Promise<void>;
-  generateAudio: (panelId: string) => Promise<void>;
-  updatePanelNarration: (panelId: string, narration: string) => void;
-}
+import { PipelinePanel, PipelineContextType, NarrationType, NarrationFormat, VoiceType } from './pipeline/types';
+import { processPanel as processPanelOperation, 
+         generateNarration as generateNarrationOperation,
+         generateAudio as generateAudioOperation,
+         updatePanelNarration as updatePanelNarrationOperation } from './pipeline/pipelineOperations';
 
 const PipelineContext = createContext<PipelineContextType | undefined>(undefined);
 
@@ -49,125 +16,41 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [voiceType, setVoiceType] = useState<VoiceType>('male');
 
   const processPanel = async (panelId: string) => {
-    console.log(`Process panel method called for ${panelId}, but processing is handled in ImageProcessor component`);
+    await processPanelOperation(panelId);
   };
 
   const generateNarration = async (panelId: string) => {
-    setSelectedPanels(panels => 
-      panels.map(panel => 
-        panel.id === panelId 
-          ? { ...panel, isProcessing: true }
-          : panel
-      )
+    await generateNarrationOperation(
+      panelId,
+      selectedPanels,
+      setSelectedPanels,
+      activePanel,
+      setActivePanel,
+      narrationTone,
+      narrationFormat
     );
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const mockNarration = "As the sun sets over the bustling city, our protagonist stands at the crossroads of destiny. The weight of their decisions hangs in the air, tension rising with each passing moment.";
-      
-      setSelectedPanels(panels => 
-        panels.map(panel => 
-          panel.id === panelId 
-            ? { 
-                ...panel, 
-                isProcessing: false, 
-                narration: mockNarration,
-                narrationTone,
-                narrationFormat
-              }
-            : panel
-        )
-      );
-      
-      if (activePanel?.id === panelId) {
-        setActivePanel(prev => prev ? { 
-          ...prev, 
-          isProcessing: false,
-          narration: mockNarration,
-          narrationTone,
-          narrationFormat
-        } : null);
-      }
-    } catch (error) {
-      setSelectedPanels(panels => 
-        panels.map(panel => 
-          panel.id === panelId 
-            ? { 
-                ...panel, 
-                isProcessing: false, 
-                isError: true, 
-                errorMessage: error instanceof Error ? error.message : 'An error occurred' 
-              }
-            : panel
-        )
-      );
-    }
   };
 
   const generateAudio = async (panelId: string) => {
-    setSelectedPanels(panels => 
-      panels.map(panel => 
-        panel.id === panelId 
-          ? { ...panel, isProcessing: true }
-          : panel
-      )
+    await generateAudioOperation(
+      panelId,
+      selectedPanels,
+      setSelectedPanels,
+      activePanel,
+      setActivePanel,
+      voiceType
     );
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2500));
-      
-      const mockAudioUrl = "https://example.com/audio.mp3";
-      
-      setSelectedPanels(panels => 
-        panels.map(panel => 
-          panel.id === panelId 
-            ? { 
-                ...panel, 
-                isProcessing: false, 
-                audioUrl: mockAudioUrl,
-                voiceType
-              }
-            : panel
-        )
-      );
-      
-      if (activePanel?.id === panelId) {
-        setActivePanel(prev => prev ? { 
-          ...prev, 
-          isProcessing: false,
-          audioUrl: mockAudioUrl,
-          voiceType
-        } : null);
-      }
-    } catch (error) {
-      setSelectedPanels(panels => 
-        panels.map(panel => 
-          panel.id === panelId 
-            ? { 
-                ...panel, 
-                isProcessing: false, 
-                isError: true, 
-                errorMessage: error instanceof Error ? error.message : 'An error occurred' 
-              }
-            : panel
-        )
-      );
-    }
   };
 
   const updatePanelNarration = (panelId: string, narration: string) => {
-    setSelectedPanels(panels => 
-      panels.map(panel => 
-        panel.id === panelId 
-          ? { ...panel, narration }
-          : panel
-      )
+    updatePanelNarrationOperation(
+      panelId,
+      narration,
+      selectedPanels,
+      setSelectedPanels,
+      activePanel,
+      setActivePanel
     );
-    
-    if (activePanel?.id === panelId) {
-      setActivePanel(prev => prev ? { ...prev, narration } : null);
-    }
   };
 
   return (
@@ -199,3 +82,6 @@ export const usePipeline = () => {
   }
   return context;
 };
+
+// Re-export types for easy access
+export { PipelinePanel, NarrationType, NarrationFormat, VoiceType } from './pipeline/types';
