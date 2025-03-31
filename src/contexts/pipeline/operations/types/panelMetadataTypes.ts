@@ -16,8 +16,8 @@ export interface PanelMetadata {
 }
 
 // Type guard to check if data is a valid metadata object with expected properties
-// Using a different approach to fix the type compatibility issue
-export const isMetadataObject = (data: Json): data is PanelMetadata => {
+// Using a different approach to fix the TypeScript error
+export const isMetadataObject = (data: Json | null | undefined): boolean => {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     return false;
   }
