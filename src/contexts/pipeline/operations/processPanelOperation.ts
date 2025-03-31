@@ -2,26 +2,10 @@
 import { PipelinePanel } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Json } from '@/integrations/supabase/types';
-
-// Helper for exponential backoff
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Type guard to check if data is a valid metadata object with expected properties
-const isMetadataObject = (data: Json): data is { 
-  processing?: boolean;
-  error?: string; 
-  content?: string;
-  scene_type?: string;
-  character_count?: number;
-  mood?: string;
-  action_level?: string;
-  processed_at?: string;
-  labels?: any[];
-  imageHash?: string;
-} => {
-  return typeof data === 'object' && data !== null && !Array.isArray(data);
-};
+import { isMetadataObject } from './types/panelMetadataTypes';
+import { updatePanelWithProcessingStatus } from './utils/panelProcessingUtils';
+import { callProcessPanelFunction } from './api/panelEdgeFunctionClient';
+import { pollProcessingStatus } from './polling/pollProcessingStatus';
 
 export const processPanel = async (
   panelId: string,
@@ -34,12 +18,12 @@ export const processPanel = async (
   
   // Mark the panel as processing
   const updatedPanels = [...selectedPanels];
-  updatedPanels[panelIndex] = { 
-    ...updatedPanels[panelIndex], 
-    isProcessing: true,
-    isError: false,
-    status: 'processing'
-  };
+  updatedPanels[panelIndex] = updatePanelWithProcessingStatus(
+    updatedPanels[panelIndex],
+    true,
+    false,
+    'processing'
+  );
   setSelectedPanels(updatedPanels);
 
   try {
@@ -51,185 +35,58 @@ export const processPanel = async (
     }
 
     // Call the Supabase Edge Function with retry logic
-    const maxRetries = 3;
-    let lastError: Error | null = null;
+    const data = await callProcessPanelFunction(panelId, imageUrl);
     
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        // Add attempt number to the request for logging/debugging
-        const { data, error } = await supabase.functions.invoke('process-panel', {
-          body: {
-            panelId,
-            imageUrl,
-            attempt: attempt + 1
-          }
-        });
-        
-        if (error) throw error;
-        if (!data || !data.result) throw new Error('Invalid response from edge function');
-        
-        // Safely type check the result data
-        const result = data.result;
-        if (!isMetadataObject(result)) {
-          throw new Error('Invalid metadata format from edge function');
-        }
-        
-        // Update the panel with the initial processing status
-        const resultPanels = [...selectedPanels];
-        resultPanels[panelIndex] = {
-          ...resultPanels[panelIndex],
-          isProcessing: result.processing === true,
-          status: result.processing === true ? 'processing' : 'done',
-          metadata: result,
-          content: typeof result.content === 'string' ? result.content : undefined,
-          sceneType: typeof result.scene_type === 'string' ? result.scene_type : undefined,
-          characterCount: typeof result.character_count === 'number' ? result.character_count : undefined,
-          mood: typeof result.mood === 'string' ? result.mood : undefined,
-          actionLevel: typeof result.action_level === 'string' ? result.action_level : undefined,
-          lastProcessedAt: typeof result.processed_at === 'string' ? result.processed_at : undefined,
-          // Set debug overlay if we have labels
-          debugOverlay: Array.isArray(result.labels) ? result.labels : undefined
-        };
-        setSelectedPanels(resultPanels);
-        
-        // If processing is happening in background, start polling
-        if (result.processing === true) {
-          toast.info('Processing started - this may take a moment');
-          pollProcessingStatus(panelId, selectedPanels, setSelectedPanels);
-        } else {
-          toast.success(`Panel processed successfully${data.cached ? ' (cached)' : ''}`);
-        }
-        return;
-      } catch (err) {
-        lastError = err as Error;
-        console.error(`Attempt ${attempt + 1} failed:`, err);
-        
-        // Don't wait after the last attempt
-        if (attempt < maxRetries - 1) {
-          // Exponential backoff: 1s, 2s, 4s, etc.
-          const backoffTime = Math.pow(2, attempt) * 1000;
-          await sleep(backoffTime);
-        }
-      }
+    if (!data || !data.result) throw new Error('Invalid response from edge function');
+    
+    // Safely type check the result data
+    const result = data.result;
+    if (!isMetadataObject(result)) {
+      throw new Error('Invalid metadata format from edge function');
     }
     
-    // If we get here, all retries failed
-    throw lastError || new Error('Failed after multiple attempts');
+    // Update the panel with the initial processing status
+    const resultPanels = [...selectedPanels];
+    resultPanels[panelIndex] = {
+      ...resultPanels[panelIndex],
+      isProcessing: result.processing === true,
+      status: result.processing === true ? 'processing' : 'done',
+      metadata: result,
+      content: typeof result.content === 'string' ? result.content : undefined,
+      sceneType: typeof result.scene_type === 'string' ? result.scene_type : undefined,
+      characterCount: typeof result.character_count === 'number' ? result.character_count : undefined,
+      mood: typeof result.mood === 'string' ? result.mood : undefined,
+      actionLevel: typeof result.action_level === 'string' ? result.action_level : undefined,
+      lastProcessedAt: typeof result.processed_at === 'string' ? result.processed_at : undefined,
+      // Set debug overlay if we have labels
+      debugOverlay: Array.isArray(result.labels) ? result.labels : undefined
+    };
+    setSelectedPanels(resultPanels);
+    
+    // If processing is happening in background, start polling
+    if (result.processing === true) {
+      toast.info('Processing started - this may take a moment');
+      pollProcessingStatus(panelId, selectedPanels, setSelectedPanels);
+    } else {
+      toast.success(`Panel processed successfully${data.cached ? ' (cached)' : ''}`);
+    }
+    return;
   } catch (error) {
     console.error("Error processing panel:", error);
     
     // Mark the panel as having an error
     const errorPanels = [...selectedPanels];
-    errorPanels[panelIndex] = {
-      ...errorPanels[panelIndex],
-      isProcessing: false,
-      isError: true,
-      status: 'error',
-      errorMessage: error instanceof Error ? error.message : 'An error occurred'
-    };
+    errorPanels[panelIndex] = updatePanelWithProcessingStatus(
+      errorPanels[panelIndex],
+      false,
+      true,
+      'error',
+      error instanceof Error ? error.message : 'An error occurred'
+    );
     setSelectedPanels(errorPanels);
     
     // Show a toast with the error
     toast.error(`Failed to process panel: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return;
-  }
-};
-
-// Poll for processing status until complete
-const pollProcessingStatus = async (
-  panelId: string,
-  selectedPanels: PipelinePanel[],
-  setSelectedPanels: React.Dispatch<React.SetStateAction<PipelinePanel[]>>
-): Promise<void> => {
-  let isProcessing = true;
-  let retryCount = 0;
-  const maxRetries = 30; // Retry for up to ~5 minutes (with exponential backoff)
-  
-  while (isProcessing && retryCount < maxRetries) {
-    try {
-      await sleep(3000 + retryCount * 500); // Start with 3s, gradually increase
-      
-      // Check if the panel is still in the selected panels
-      const currentPanels = selectedPanels;
-      const panelIndex = currentPanels.findIndex(p => p.id === panelId);
-      if (panelIndex === -1) break; // Panel was removed, stop polling
-      
-      // Query the database for the current status
-      const { data, error } = await supabase
-        .from('panel_metadata')
-        .select('metadata')
-        .eq('panel_id', panelId)
-        .maybeSingle();
-        
-      if (error) {
-        console.error("Error checking processing status:", error);
-        retryCount++;
-        continue;
-      }
-      
-      // Check if metadata exists and is an object
-      if (!data?.metadata || !isMetadataObject(data.metadata)) {
-        retryCount++;
-        continue;
-      }
-      
-      // Check if processing is complete
-      if (data.metadata.processing !== true) {
-        isProcessing = false;
-        
-        // Update the panel with the results
-        const updatedPanels = [...currentPanels];
-        updatedPanels[panelIndex] = {
-          ...updatedPanels[panelIndex],
-          isProcessing: false,
-          isError: typeof data.metadata.error === 'string' && data.metadata.error.length > 0,
-          status: typeof data.metadata.error === 'string' && data.metadata.error.length > 0 ? 'error' : 'done',
-          metadata: data.metadata,
-          content: typeof data.metadata.content === 'string' ? data.metadata.content : undefined,
-          sceneType: typeof data.metadata.scene_type === 'string' ? data.metadata.scene_type : undefined,
-          characterCount: typeof data.metadata.character_count === 'number' ? data.metadata.character_count : undefined,
-          mood: typeof data.metadata.mood === 'string' ? data.metadata.mood : undefined,
-          actionLevel: typeof data.metadata.action_level === 'string' ? data.metadata.action_level : undefined,
-          lastProcessedAt: typeof data.metadata.processed_at === 'string' ? data.metadata.processed_at : undefined,
-          debugOverlay: Array.isArray(data.metadata.labels) ? data.metadata.labels : undefined,
-          errorMessage: typeof data.metadata.error === 'string' ? data.metadata.error : undefined
-        };
-        setSelectedPanels(updatedPanels);
-        
-        // Show appropriate toast
-        if (typeof data.metadata.error === 'string' && data.metadata.error.length > 0) {
-          toast.error(`Processing failed: ${data.metadata.error}`);
-        } else {
-          toast.success('Panel processing completed');
-        }
-      }
-      
-      retryCount++;
-    } catch (error) {
-      console.error("Error during polling:", error);
-      retryCount++;
-    }
-  }
-  
-  // If we reached max retries but didn't complete, show an error
-  if (isProcessing && retryCount >= maxRetries) {
-    console.error(`Processing timed out for panel ${panelId} after ${maxRetries} retries`);
-    
-    const currentPanels = selectedPanels;
-    const panelIndex = currentPanels.findIndex(p => p.id === panelId);
-    
-    if (panelIndex !== -1) {
-      // Update the panel to show timeout
-      const timeoutPanels = [...currentPanels];
-      timeoutPanels[panelIndex] = {
-        ...timeoutPanels[panelIndex],
-        isProcessing: false,
-        isError: true,
-        status: 'error',
-        errorMessage: 'Processing timed out. Please try again.'
-      };
-      setSelectedPanels(timeoutPanels);
-      toast.error('Processing timed out. Please try again later.');
-    }
   }
 };
