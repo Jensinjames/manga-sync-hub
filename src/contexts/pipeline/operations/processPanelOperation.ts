@@ -7,8 +7,19 @@ import { Json } from '@/integrations/supabase/types';
 // Helper for exponential backoff
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Helper to safely type-check JSON metadata
-const isMetadataObject = (data: Json): data is { [key: string]: any } => {
+// Type guard to check if data is a valid metadata object with expected properties
+const isMetadataObject = (data: Json): data is { 
+  processing?: boolean;
+  error?: string; 
+  content?: string;
+  scene_type?: string;
+  character_count?: number;
+  mood?: string;
+  action_level?: string;
+  processed_at?: string;
+  labels?: any[];
+  imageHash?: string;
+} => {
   return typeof data === 'object' && data !== null && !Array.isArray(data);
 };
 
@@ -70,12 +81,12 @@ export const processPanel = async (
           isProcessing: result.processing === true,
           status: result.processing === true ? 'processing' : 'done',
           metadata: result,
-          content: result.content as string | undefined,
-          sceneType: result.scene_type as string | undefined,
+          content: typeof result.content === 'string' ? result.content : undefined,
+          sceneType: typeof result.scene_type === 'string' ? result.scene_type : undefined,
           characterCount: typeof result.character_count === 'number' ? result.character_count : undefined,
-          mood: result.mood as string | undefined,
-          actionLevel: result.action_level as string | undefined,
-          lastProcessedAt: result.processed_at as string | undefined,
+          mood: typeof result.mood === 'string' ? result.mood : undefined,
+          actionLevel: typeof result.action_level === 'string' ? result.action_level : undefined,
+          lastProcessedAt: typeof result.processed_at === 'string' ? result.processed_at : undefined,
           // Set debug overlay if we have labels
           debugOverlay: Array.isArray(result.labels) ? result.labels : undefined
         };
@@ -171,22 +182,22 @@ const pollProcessingStatus = async (
         updatedPanels[panelIndex] = {
           ...updatedPanels[panelIndex],
           isProcessing: false,
-          isError: !!data.metadata.error,
-          status: data.metadata.error ? 'error' : 'done',
+          isError: typeof data.metadata.error === 'string' && data.metadata.error.length > 0,
+          status: typeof data.metadata.error === 'string' && data.metadata.error.length > 0 ? 'error' : 'done',
           metadata: data.metadata,
-          content: data.metadata.content as string | undefined,
-          sceneType: data.metadata.scene_type as string | undefined,
+          content: typeof data.metadata.content === 'string' ? data.metadata.content : undefined,
+          sceneType: typeof data.metadata.scene_type === 'string' ? data.metadata.scene_type : undefined,
           characterCount: typeof data.metadata.character_count === 'number' ? data.metadata.character_count : undefined,
-          mood: data.metadata.mood as string | undefined,
-          actionLevel: data.metadata.action_level as string | undefined,
-          lastProcessedAt: data.metadata.processed_at as string | undefined,
+          mood: typeof data.metadata.mood === 'string' ? data.metadata.mood : undefined,
+          actionLevel: typeof data.metadata.action_level === 'string' ? data.metadata.action_level : undefined,
+          lastProcessedAt: typeof data.metadata.processed_at === 'string' ? data.metadata.processed_at : undefined,
           debugOverlay: Array.isArray(data.metadata.labels) ? data.metadata.labels : undefined,
-          errorMessage: data.metadata.error as string | undefined
+          errorMessage: typeof data.metadata.error === 'string' ? data.metadata.error : undefined
         };
         setSelectedPanels(updatedPanels);
         
         // Show appropriate toast
-        if (data.metadata.error) {
+        if (typeof data.metadata.error === 'string' && data.metadata.error.length > 0) {
           toast.error(`Processing failed: ${data.metadata.error}`);
         } else {
           toast.success('Panel processing completed');
