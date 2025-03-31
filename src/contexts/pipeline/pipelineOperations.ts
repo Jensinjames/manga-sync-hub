@@ -4,6 +4,7 @@ import { processPanel } from './operations/processPanelOperation';
 import { generateNarration, updatePanelNarration } from './operations/narrationOperations';
 import { generateAudio } from './operations/audioOperations';
 import { MangaVisionClient, DEFAULT_CONFIG } from '@/utils/mangaVisionClient';
+import { MangaModelClient } from '@/utils/MangaModelClient';
 import { toast } from 'sonner';
 
 // Export the Hugging Face endpoints configuration with timeout settings
@@ -15,6 +16,7 @@ export const HF_CONFIG = {
 
 // Manga Vision client singleton for direct API access
 let mangaVisionClientInstance: MangaVisionClient | null = null;
+let mangaModelClientInstance: MangaModelClient | null = null;
 
 // Get or initialize the MangaVisionClient
 export const getMangaVisionClient = async (): Promise<MangaVisionClient> => {
@@ -31,6 +33,21 @@ export const getMangaVisionClient = async (): Promise<MangaVisionClient> => {
   return mangaVisionClientInstance;
 };
 
+// Get or initialize the new MangaModelClient
+export const getMangaModelClient = async (): Promise<MangaModelClient> => {
+  if (!mangaModelClientInstance) {
+    mangaModelClientInstance = new MangaModelClient("jensin-manga109-yolo");
+    try {
+      await mangaModelClientInstance.connect();
+    } catch (error) {
+      console.error('Failed to connect to MangaModel client:', error);
+      toast.error('Failed to connect to manga vision service');
+      throw error;
+    }
+  }
+  return mangaModelClientInstance;
+};
+
 // Lazy-load heavy resources
 export const loadResources = async () => {
   try {
@@ -44,7 +61,7 @@ export const loadResources = async () => {
 };
 
 // Export the MangaVisionClient class so it's accessible in other modules
-export { MangaVisionClient };
+export { MangaVisionClient, MangaModelClient };
 export { processPanel };
 export { generateNarration, updatePanelNarration };
 export { generateAudio };

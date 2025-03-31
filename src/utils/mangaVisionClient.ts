@@ -1,6 +1,6 @@
 
-import { client as gradioClient } from "@gradio/client";
 import { PanelLabel } from "@/contexts/pipeline/types";
+import { MangaModelClient, PredictionResult, Annotation } from "./MangaModelClient";
 
 export type MangaVisionAnnotation = {
   label: string;
@@ -34,35 +34,19 @@ export const DEFAULT_CONFIG: MangaVisionConfig = {
  * This can be used for direct client-side processing when debugging or in development
  */
 export class MangaVisionClient {
-  private client: any = null;
-  private readonly apiEndpoint = "/_gr_detect";
+  private modelClient: MangaModelClient;
   private config: MangaVisionConfig;
-  private connectionPromise: Promise<any> | null = null;
 
   constructor(config: Partial<MangaVisionConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.modelClient = new MangaModelClient(this.config.spaceName);
   }
 
   /**
    * Connect to the HuggingFace Space
    */
   async connect(): Promise<any> {
-    if (this.client) return this.client;
-    
-    if (!this.connectionPromise) {
-      try {
-        // Use the correct import from @gradio/client
-        this.connectionPromise = gradioClient(this.config.spaceName, {}).then(client => {
-          this.client = client;
-          return client;
-        });
-      } catch (error) {
-        console.error("Failed to connect to Gradio client:", error);
-        throw error;
-      }
-    }
-    
-    return this.connectionPromise;
+    return this.modelClient.connect();
   }
 
   /**
@@ -73,37 +57,37 @@ export class MangaVisionClient {
   async predict(
     imageData: string | Blob
   ): Promise<MangaVisionPredictionResult> {
-    const client = await this.connect();
-    
-    // Prepare the image input (handle both string and Blob types)
-    const imageInput = typeof imageData === 'string' 
-      ? imageData 
-      : imageData;
-
     try {
       console.log(`Calling Manga109 YOLO API with model ${this.config.modelName}`);
       
-      const result = await client.predict(this.apiEndpoint, {
-        image: imageInput,
-        model_name: this.config.modelName,
-        iou_threshold: this.config.iouThreshold,
-        score_threshold: this.config.scoreThreshold,
-        allow_dynamic: this.config.allowDynamic
-      });
+      const result = await this.modelClient.predict(
+        imageData,
+        this.config.modelName,
+        this.config.iouThreshold,
+        this.config.scoreThreshold,
+        this.config.allowDynamic
+      );
 
-      // Handle the result in the new format
-      const data = result.data as any;
-      if (!data || !Array.isArray(data.annotations)) {
-        throw new Error('Invalid response format from the model');
-      }
-
-      return {
-        annotations: data.annotations
-      };
+      // Convert from MangaModelClient format to MangaVisionPredictionResult format
+      return this.convertPredictionResult(result);
     } catch (error) {
       console.error('Error predicting with MangaVisionClient:', error);
       throw error;
     }
+  }
+  
+  /**
+   * Convert from MangaModelClient prediction result to MangaVisionPredictionResult format
+   */
+  private convertPredictionResult(result: PredictionResult): MangaVisionPredictionResult {
+    return {
+      annotations: (result.annotations || []).map(ann => ({
+        label: ann.label,
+        confidence: ann.confidence || 0,
+        bbox: ann.bbox || [0, 0, 0, 0],
+        image: ann.image
+      }))
+    };
   }
 
   /**
@@ -132,36 +116,22 @@ export class MangaVisionClient {
    * Fetch an image from a URL and convert to a Blob
    */
   static async fetchImageBlob(url: string): Promise<Blob> {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-    return await response.blob();
+    return MangaModelClient.fetchImageBlob(url);
   }
 
   /**
    * Utility to convert a data URL to a Blob
    */
   static dataURLToBlob(dataURL: string): Blob {
-    const parts = dataURL.split(';base64,');
-    if (parts.length !== 2) {
-      throw new Error('Invalid data URL format');
-    }
-    
-    const contentType = parts[0].split(':')[1];
-    const raw = window.atob(parts[1]);
-    const rawLength = raw.length;
-    const uInt8Array = new Uint8Array(rawLength);
-    
-    for (let i = 0; i < rawLength; ++i) {
-      uInt8Array[i] = raw.charCodeAt(i);
-    }
-    
-    return new Blob([uInt8Array], { type: contentType });
+    return MangaModelClient.dataURLToBlob(dataURL);
   }
 }
 
 /**
  * React hook for using MangaVisionClient
  */
+import { useState } from 'react';
+
 export function useMangaVisionClient(config: Partial<MangaVisionConfig> = {}) {
   const [result, setResult] = useState<MangaVisionPredictionResult | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -186,6 +156,3 @@ export function useMangaVisionClient(config: Partial<MangaVisionConfig> = {}) {
 
   return { predict, result, error, loading, client };
 }
-
-// Import React useState for the hook
-import { useState } from 'react';

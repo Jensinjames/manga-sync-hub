@@ -11,7 +11,7 @@ import {
 import { updatePanelWithProcessingStatus } from './utils/panelProcessingUtils';
 import { callProcessPanelFunction } from './api/panelEdgeFunctionClient';
 import { pollProcessingStatus } from './polling/pollProcessingStatus';
-import { getMangaVisionClient, MangaVisionClient } from '../pipelineOperations';
+import { getMangaVisionClient, getMangaModelClient, MangaVisionClient, MangaModelClient } from '../pipelineOperations';
 import { MangaVisionTransformer } from '@/utils/mangaVisionTransformer';
 
 // Simple URL hash function for caching
@@ -61,42 +61,104 @@ export const processPanel = async (
     if (useClientSide) {
       try {
         toast.info('Processing with client-side vision API...');
-        const mangaVisionClient = await getMangaVisionClient();
         
-        // For data URLs, convert to blob before sending
-        let imageInput;
-        if (imageUrl.startsWith('data:')) {
-          imageInput = MangaVisionClient.dataURLToBlob(imageUrl);
-        } else {
-          // For remote URLs, use the URL directly
-          imageInput = imageUrl;
+        // First try the new MangaModelClient
+        try {
+          const mangaModelClient = await getMangaModelClient();
+          
+          // For data URLs, convert to blob before sending
+          let imageInput;
+          if (imageUrl.startsWith('data:')) {
+            imageInput = MangaModelClient.dataURLToBlob(imageUrl);
+          } else {
+            // For remote URLs, use the URL directly
+            imageInput = imageUrl;
+          }
+          
+          const predictionResult = await mangaModelClient.predict(
+            imageInput, 
+            "v2023.12.07_n_yv11", 
+            0.7, 
+            0.25, 
+            true,
+            { imageUrl }
+          );
+          
+          // Convert the prediction result to panel metadata
+          const pipelineLabels = MangaModelClient.convertToPanelLabels(predictionResult);
+          
+          // Create metadata structure
+          const metadata = {
+            labels: pipelineLabels,
+            scene_type: determineSceneType(predictionResult.annotations),
+            character_count: countCharacters(predictionResult.annotations),
+            content: generateContentDescription(predictionResult.annotations),
+            mood: determineMood(predictionResult.annotations),
+            action_level: determineActionLevel(predictionResult.annotations),
+            processed_at: new Date().toISOString(),
+            hash: imageHash
+          };
+          
+          // Update the panel with the results
+          const resultPanels = [...selectedPanels];
+          resultPanels[panelIndex] = {
+            ...resultPanels[panelIndex],
+            isProcessing: false,
+            status: 'done',
+            metadata: metadata,
+            content: metadata.content,
+            sceneType: metadata.scene_type,
+            characterCount: metadata.character_count,
+            mood: metadata.mood,
+            actionLevel: metadata.action_level,
+            lastProcessedAt: metadata.processed_at,
+            debugOverlay: pipelineLabels
+          };
+          
+          setSelectedPanels(resultPanels);
+          toast.success('Panel processed successfully using client-side API');
+          return;
+        } catch (modelClientError) {
+          console.error("New MangaModelClient failed, falling back to MangaVisionClient:", modelClientError);
+          
+          // Fall back to the original MangaVisionClient
+          const mangaVisionClient = await getMangaVisionClient();
+          
+          // For data URLs, convert to blob before sending
+          let imageInput;
+          if (imageUrl.startsWith('data:')) {
+            imageInput = MangaVisionClient.dataURLToBlob(imageUrl);
+          } else {
+            // For remote URLs, use the URL directly
+            imageInput = imageUrl;
+          }
+          
+          const predictionResult = await mangaVisionClient.predict(imageInput);
+          const metadata = MangaVisionTransformer.toPanelMetadata(predictionResult, imageHash);
+          
+          // Convert labels to the format expected by the pipeline
+          const pipelineLabels = metadata.labels || [];
+          
+          // Update the panel with the results
+          const resultPanels = [...selectedPanels];
+          resultPanels[panelIndex] = {
+            ...resultPanels[panelIndex],
+            isProcessing: false,
+            status: 'done',
+            metadata: metadata,
+            content: metadata.content,
+            sceneType: metadata.scene_type,
+            characterCount: metadata.character_count,
+            mood: metadata.mood,
+            actionLevel: metadata.action_level,
+            lastProcessedAt: metadata.processed_at,
+            debugOverlay: pipelineLabels
+          };
+          
+          setSelectedPanels(resultPanels);
+          toast.success('Panel processed successfully using client-side API');
+          return;
         }
-        
-        const predictionResult = await mangaVisionClient.predict(imageInput);
-        const metadata = MangaVisionTransformer.toPanelMetadata(predictionResult, imageHash);
-        
-        // Convert labels to the format expected by the pipeline
-        const pipelineLabels = metadata.labels || [];
-        
-        // Update the panel with the results
-        const resultPanels = [...selectedPanels];
-        resultPanels[panelIndex] = {
-          ...resultPanels[panelIndex],
-          isProcessing: false,
-          status: 'done',
-          metadata: metadata,
-          content: metadata.content,
-          sceneType: metadata.scene_type,
-          characterCount: metadata.character_count,
-          mood: metadata.mood,
-          actionLevel: metadata.action_level,
-          lastProcessedAt: metadata.processed_at,
-          debugOverlay: pipelineLabels
-        };
-        
-        setSelectedPanels(resultPanels);
-        toast.success('Panel processed successfully using client-side API');
-        return;
       } catch (clientError) {
         console.error("Client-side processing failed, falling back to edge function:", clientError);
         toast.error('Client-side processing failed, falling back to server');
@@ -164,3 +226,62 @@ export const processPanel = async (
     return;
   }
 };
+
+// Helper functions to extract metadata from annotations
+function determineSceneType(annotations: any[]): string {
+  // Basic logic to determine scene type
+  const labels = annotations.map(a => a.label.toLowerCase());
+  
+  if (labels.some(l => l.includes('action'))) return 'action';
+  if (labels.some(l => l.includes('character'))) return 'character';
+  if (labels.some(l => l.includes('background'))) return 'scenery';
+  
+  return 'general';
+}
+
+function countCharacters(annotations: any[]): number {
+  return annotations.filter(a => 
+    a.label.toLowerCase().includes('character') || 
+    a.label.toLowerCase().includes('person')
+  ).length;
+}
+
+function generateContentDescription(annotations: any[]): string {
+  if (annotations.length === 0) return 'Empty scene';
+  
+  const labelCounts: Record<string, number> = {};
+  
+  annotations.forEach(a => {
+    const label = a.label.toLowerCase();
+    labelCounts[label] = (labelCounts[label] || 0) + 1;
+  });
+  
+  const description = Object.entries(labelCounts)
+    .map(([label, count]) => `${count} ${label}${count > 1 ? 's' : ''}`)
+    .join(', ');
+  
+  return description || 'Scene with objects';
+}
+
+function determineMood(annotations: any[]): string {
+  // Simplified mood detection based on labels
+  const labels = annotations.map(a => a.label.toLowerCase());
+  
+  if (labels.some(l => l.includes('action') || l.includes('fighting'))) return 'intense';
+  if (labels.some(l => l.includes('smile') || l.includes('happy'))) return 'happy';
+  if (labels.some(l => l.includes('sad') || l.includes('cry'))) return 'sad';
+  
+  return 'neutral';
+}
+
+function determineActionLevel(annotations: any[]): string {
+  // Simplified action level detection
+  const actionLabels = annotations.filter(a => 
+    a.label.toLowerCase().includes('action') || 
+    a.label.toLowerCase().includes('move')
+  ).length;
+  
+  if (actionLabels > 2) return 'high';
+  if (actionLabels > 0) return 'medium';
+  return 'low';
+}
