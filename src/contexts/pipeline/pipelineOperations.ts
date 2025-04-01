@@ -1,4 +1,3 @@
-
 import { PipelinePanel, NarrationType, NarrationFormat, VoiceType } from './types';
 import { processPanel } from './operations/processPanelOperation';
 import { generateNarration, updatePanelNarration } from './operations/narrationOperations';
