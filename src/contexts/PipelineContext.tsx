@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { PipelinePanel, PipelineContextType, NarrationType, NarrationFormat, VoiceType } from './pipeline/types';
 import { processPanel as processPanelOperation, 
@@ -48,8 +47,25 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
     // Track job status
     setJobsRunning(prev => ({ ...prev, [panelId]: true }));
     try {
-      // Fixed: Using the correct number of arguments
-      await processPanelOperation(panelId, selectedPanels, setSelectedPanels, useClientSideProcessing);
+      // Find the panel by ID
+      const panel = selectedPanels.find(p => p.id === panelId);
+      if (!panel) {
+        console.error(`Panel with ID ${panelId} not found`);
+        return;
+      }
+      
+      // Call processPanel with the correct arguments structure
+      await processPanelOperation(panel, {
+        preferClientSide: useClientSideProcessing,
+        onSuccess: (updatedPanel) => {
+          // Update the panel in the selectedPanels array
+          setSelectedPanels(prevPanels => 
+            prevPanels.map(p => 
+              p.id === updatedPanel.id ? updatedPanel : p
+            )
+          );
+        }
+      });
     } finally {
       setJobsRunning(prev => ({ ...prev, [panelId]: false }));
     }
