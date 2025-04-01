@@ -48,6 +48,10 @@ export interface PipelinePanel extends MangaPanel {
   lastProcessedAt?: string;
   debugOverlay?: PanelLabel[];
   jobId?: string;
+  // Add the missing properties that are causing TypeScript errors
+  labels?: PanelLabel[];
+  processedAt?: string;
+  processingError?: string | null;
 }
 
 export interface PipelineContextType {

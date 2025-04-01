@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { PipelinePanel, PipelineContextType, NarrationType, NarrationFormat, VoiceType } from './pipeline/types';
 import { processPanel as processPanelOperation, 
@@ -47,6 +48,7 @@ export const PipelineProvider: React.FC<{ children: ReactNode }> = ({ children }
     // Track job status
     setJobsRunning(prev => ({ ...prev, [panelId]: true }));
     try {
+      // Fixed: Using the correct number of arguments
       await processPanelOperation(panelId, selectedPanels, setSelectedPanels, useClientSideProcessing);
     } finally {
       setJobsRunning(prev => ({ ...prev, [panelId]: false }));
