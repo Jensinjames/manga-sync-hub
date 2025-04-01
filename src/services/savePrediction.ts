@@ -24,13 +24,13 @@ export async function storePrediction(
     // Insert the prediction record
     const { data: predictionRow, error: predError } = await supabase
       .from('predictions')
-      .insert([{
+      .insert({
         image_url: imageUrl,
         model_name: modelConfig.model_name,
         iou_threshold: modelConfig.iou_threshold,
         score_threshold: modelConfig.score_threshold,
         allow_dynamic: modelConfig.allow_dynamic
-      }])
+      })
       .select()
       .single();
 
@@ -41,16 +41,16 @@ export async function storePrediction(
 
     // Insert any annotations if available
     if (prediction.annotations && prediction.annotations.length > 0) {
+      const annotationsToInsert = prediction.annotations.map((ann) => ({
+        prediction_id: predictionRow.id,
+        label: ann.label,
+        confidence: ann.confidence ?? null,
+        bbox: ann.bbox ?? null
+      }));
+
       const { error: annError } = await supabase
         .from('annotations')
-        .insert(
-          prediction.annotations.map((ann) => ({
-            prediction_id: predictionRow.id,
-            label: ann.label,
-            confidence: ann.confidence ?? null,
-            bbox: ann.bbox ?? null
-          }))
-        );
+        .insert(annotationsToInsert);
 
       if (annError) {
         console.error("Failed to store annotations:", annError);
