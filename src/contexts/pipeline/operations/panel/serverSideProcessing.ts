@@ -1,6 +1,6 @@
 
 import { PipelinePanel } from '../../types';
-import { callProcessPanelFunction, getPanelMetadata } from '../api/panelEdgeFunctionClient';
+import { callProcessPanelFunction, getPanelMetadata } from '../api';
 import { sleep } from '../utils/panelProcessingUtils';
 
 // Process the panel image via edge function

@@ -9,7 +9,7 @@ import {
   errorHasLength,
   getErrorString
 } from '../types/panelMetadataTypes';
-import { getPanelMetadata, getPanelJobs } from '../api/panelEdgeFunctionClient';
+import { getPanelMetadata, getPanelJobs } from '../api';
 
 // Poll for processing status until complete
 export const pollProcessingStatus = async (
