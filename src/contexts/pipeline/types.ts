@@ -1,3 +1,4 @@
+
 import { MangaPanel } from '@/types/manga';
 
 export type NarrationType = 'anime drama' | 'noir' | 'shonen epic' | 'comedic dub';

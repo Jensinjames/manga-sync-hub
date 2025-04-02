@@ -1,3 +1,4 @@
+
 import { PanelLabel } from "@/contexts/pipeline/types";
 import { MangaModelClient, PredictionResult, Annotation } from "./MangaModelClient";
 

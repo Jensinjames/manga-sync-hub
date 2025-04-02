@@ -30,12 +30,8 @@ serve(async (req) => {
       throw new Error('Missing Supabase environment variables');
     }
     
-    // Create Supabase client properly specifying public schema
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      db: {
-        schema: 'public'
-      }
-    });
+    // Create Supabase client with explicit schema setting
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // Fetch both panel metadata and the latest job status
     const [metadataResult, jobsResult] = await Promise.all([
