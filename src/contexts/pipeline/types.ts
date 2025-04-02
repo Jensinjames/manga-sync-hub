@@ -1,4 +1,3 @@
-
 import { MangaPanel } from '@/types/manga';
 
 export type NarrationType = 'anime drama' | 'noir' | 'shonen epic' | 'comedic dub';
@@ -48,10 +47,10 @@ export interface PipelinePanel extends MangaPanel {
   lastProcessedAt?: string;
   debugOverlay?: PanelLabel[];
   jobId?: string;
-  // Add the missing properties that are causing TypeScript errors
   labels?: PanelLabel[];
   processedAt?: string;
   processingError?: string | null;
+  forceClientProcessing?: boolean;
 }
 
 export interface PipelineContextType {

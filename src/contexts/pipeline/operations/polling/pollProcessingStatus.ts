@@ -119,10 +119,12 @@ export const pollProcessingStatus = async (
             
             // We'll let the system continue polling, but mark for client-side processing
             const updatedPanels = [...currentPanels];
-            updatedPanels[panelIndex] = {
-              ...updatedPanels[panelIndex],
+            // Create a new object with all existing properties plus the new one
+            const updatedPanel = {
+              ...updatedPanels[panelIndex], 
               forceClientProcessing: true // Add flag for later
             };
+            updatedPanels[panelIndex] = updatedPanel;
             setSelectedPanels(updatedPanels);
           }
         }

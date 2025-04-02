@@ -2,9 +2,10 @@
 import { PipelinePanel } from '../../types';
 import { toast } from 'sonner';
 import { getMangaModelClient, getMangaVisionClient } from '../../pipelineOperations';
-import { MangaVisionClient } from '@/utils/mangaVisionClient';
+import { MangaVisionClient, MangaVisionPredictionResult } from '@/utils/mangaVisionClient';
 import { storePrediction } from '@/services/savePrediction';
 import { MangaVisionTransformer } from '@/utils/mangaVisionTransformer';
+import { PredictionResult } from '@/utils/MangaModelClient';
 
 // Process the panel image via client-side API calls
 export const processClientSide = async (
@@ -57,6 +58,16 @@ export const processClientSide = async (
       // Continue even if storage fails
     }
     
+    // Convert the result to MangaVisionPredictionResult to use with the transformer
+    const mangaVisionResult: MangaVisionPredictionResult = {
+      annotations: result.annotations.map(ann => ({
+        label: ann.label,
+        confidence: ann.confidence || 0, // Provide default value
+        bbox: ann.bbox || [0, 0, 0, 0],
+        image: ann.image
+      }))
+    };
+    
     // Update panel with the results
     updatedPanel.labels = result.annotations.map(ann => {
       const [x1, y1, x2, y2] = ann.bbox || [0, 0, 0, 0];
@@ -78,7 +89,7 @@ export const processClientSide = async (
     updatedPanel.isError = false;
     
     // Add additional metadata fields
-    const metadata = MangaVisionTransformer.toPanelMetadata(result, generateSimpleHash(panel.imageUrl));
+    const metadata = MangaVisionTransformer.toPanelMetadata(mangaVisionResult, generateSimpleHash(panel.imageUrl));
     
     updatedPanel.metadata = metadata;
     updatedPanel.content = metadata.content || 'Processed content';

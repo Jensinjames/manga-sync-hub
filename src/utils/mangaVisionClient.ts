@@ -1,10 +1,9 @@
-
 import { PanelLabel } from "@/contexts/pipeline/types";
 import { MangaModelClient, PredictionResult, Annotation } from "./MangaModelClient";
 
 export type MangaVisionAnnotation = {
   label: string;
-  confidence: number;
+  confidence: number; // Required in MangaVisionAnnotation
   bbox: [number, number, number, number]; // [x1, y1, x2, y2] format
   image?: string;
 };
@@ -78,12 +77,13 @@ export class MangaVisionClient {
   
   /**
    * Convert from MangaModelClient prediction result to MangaVisionPredictionResult format
+   * Ensure that optional confidence in Annotation becomes required in MangaVisionAnnotation
    */
   private convertPredictionResult(result: PredictionResult): MangaVisionPredictionResult {
     return {
       annotations: (result.annotations || []).map(ann => ({
         label: ann.label,
-        confidence: ann.confidence || 0,
+        confidence: ann.confidence || 0, // Provide default value of 0 for optional confidence
         bbox: ann.bbox || [0, 0, 0, 0],
         image: ann.image
       }))
