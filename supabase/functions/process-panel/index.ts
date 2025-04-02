@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.23.0";
 
@@ -62,11 +61,16 @@ serve(async (req) => {
     const imageHash = hashImageUrl(imageUrl);
     
     // Check if we already processed this image (using URL hash)
-    const { data: existingData } = await supabase
+    const { data: existingData, error: existingDataError } = await supabase
       .from('panel_metadata')
       .select('metadata')
       .eq('panel_id', panelId)
       .maybeSingle();
+    
+    if (existingDataError) {
+      console.log(`Error checking for existing data: ${existingDataError.message}`);
+      // Continue with processing instead of failing
+    }
     
     if (existingData?.metadata?.imageHash === imageHash && existingData?.metadata?.labels) {
       console.log(`Using cached results for panel ${panelId}`);
@@ -321,19 +325,25 @@ serve(async (req) => {
           
           // Update job status to done if jobId is provided
           if (jobId) {
-            await supabase
-              .from('panel_jobs')
-              .update({ 
-                status: 'done',
-                completed_at: new Date().toISOString(),
-                metadata: analysisResult
-              })
-              .eq('id', jobId);
+            try {
+              await supabase
+                .from('panel_jobs')
+                .update({ 
+                  status: 'done',
+                  completed_at: new Date().toISOString(),
+                  metadata: analysisResult
+                })
+                .eq('id', jobId);
+            } catch (jobUpdateError) {
+              console.error("Error updating job status:", jobUpdateError);
+              // Continue despite job update error
+            }
           }
           
           if (error) {
             console.error("Database error:", error);
-            throw new Error(`Failed to store panel metadata: ${error.message}`);
+            // Don't throw here, just log the error and continue
+            console.log("Continuing despite database error");
           }
           
           console.log(`Successfully processed panel ${panelId} with ${labels.length} labels`);

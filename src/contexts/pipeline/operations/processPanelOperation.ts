@@ -26,6 +26,17 @@ export const processPanel = async (
     if (!panel || !panel.imageUrl) {
       throw new Error('Invalid panel data - missing image URL');
     }
+
+    // For panels that have been explicitly marked for client-side processing
+    if (panel.forceClientProcessing) {
+      onProgress?.('Processing with client-side ML (forced)...');
+      try {
+        return await processClientSide(panel, { onProgress, onSuccess });
+      } catch (clientError) {
+        console.error('Forced client-side processing failed:', clientError);
+        throw clientError; // Let the error bubble up as this was an explicit request
+      }
+    }
     
     // Always try client-side processing first if preferred
     if (preferClientSide) {

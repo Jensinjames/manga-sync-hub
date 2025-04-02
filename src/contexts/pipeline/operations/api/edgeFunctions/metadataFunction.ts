@@ -5,7 +5,7 @@ import { sleep } from '../../utils/panelProcessingUtils';
 import { MAX_RETRIES } from '../constants';
 
 /**
- * Call the get-panel-metadata edge function with retry logic
+ * Call the get-panel-metadata edge function with improved retry logic and error handling
  */
 export const getPanelMetadata = async (
   panelId: string
@@ -15,22 +15,24 @@ export const getPanelMetadata = async (
       console.log(`Fetching metadata for panel ${panelId}, attempt ${attempt + 1}`);
       
       // Add timeout to the request
+      const timeoutMs = 15000;
       const timeout = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 15000)
+        setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs)
       );
       
-      // Call the edge function
+      // Call the edge function with explicit timeout
       const functionPromise = supabase.functions.invoke('get-panel-metadata', {
-        body: {
-          panelId
-        }
+        body: { panelId }
       });
       
       // Use Promise.race to implement timeout
-      const { data, error } = await Promise.race([functionPromise, timeout]) as any;
+      const response = await Promise.race([functionPromise, timeout]);
+      
+      // Safely extract data and error with type checking
+      const { data, error } = response || { data: null, error: new Error('Empty response') };
       
       if (error) {
-        console.error(`Error fetching metadata: ${error.message || error}`);
+        console.error(`Error fetching metadata: ${error.message || JSON.stringify(error)}`);
         throw error;
       }
       
