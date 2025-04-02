@@ -3,4 +3,4 @@
 export { createPanelJob, updatePanelJob, getPanelJobs } from './jobs/panelJobClient';
 export { callProcessPanelFunction } from './edgeFunctions/processPanelFunction';
 export { getPanelMetadata } from './edgeFunctions/metadataFunction';
-export { MAX_RETRIES } from './constants';
+export { MAX_RETRIES, REQUEST_TIMEOUT } from './constants';

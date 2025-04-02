@@ -2,25 +2,35 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { sleep } from '../../utils/panelProcessingUtils';
+import { MAX_RETRIES } from '../constants';
 
-// Maximum number of retries for edge function calls
-const MAX_RETRIES = 3;
-
-// Call the get-panel-metadata edge function with retry logic
+/**
+ * Call the get-panel-metadata edge function with retry logic
+ */
 export const getPanelMetadata = async (
   panelId: string
 ): Promise<any> => {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       console.log(`Fetching metadata for panel ${panelId}, attempt ${attempt + 1}`);
-      const { data, error } = await supabase.functions.invoke('get-panel-metadata', {
+      
+      // Add timeout to the request
+      const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 15000)
+      );
+      
+      // Call the edge function
+      const functionPromise = supabase.functions.invoke('get-panel-metadata', {
         body: {
           panelId
         }
       });
       
+      // Use Promise.race to implement timeout
+      const { data, error } = await Promise.race([functionPromise, timeout]) as any;
+      
       if (error) {
-        console.error(`Error fetching metadata: ${error.message}`);
+        console.error(`Error fetching metadata: ${error.message || error}`);
         throw error;
       }
       
@@ -40,10 +50,27 @@ export const getPanelMetadata = async (
         const backoffTime = Math.pow(2, attempt) * 1000;
         await sleep(backoffTime);
       } else {
-        throw err; // Re-throw the last error after all retries fail
+        // On last attempt failure, return empty data structure instead of throwing
+        // This helps the application continue working even when backend services fail
+        console.warn(`Failed to fetch metadata after ${MAX_RETRIES} attempts, returning empty data`);
+        return {
+          success: false,
+          data: {
+            metadata: null,
+            latestJob: null
+          },
+          error: err instanceof Error ? err.message : 'Failed after multiple attempts'
+        };
       }
     }
   }
   
-  throw new Error('Failed after multiple attempts');
+  return {
+    success: false,
+    data: {
+      metadata: null,
+      latestJob: null
+    },
+    error: 'Failed after multiple attempts'
+  };
 };

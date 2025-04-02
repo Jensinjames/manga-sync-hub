@@ -22,16 +22,20 @@ serve(async (req) => {
 
     console.log(`Fetching metadata for panel: ${panelId}`);
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    // Initialize Supabase client with proper credentials
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase environment variables');
     }
     
-    // Create Supabase client with explicit schema selection
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Create Supabase client properly specifying public schema
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      db: {
+        schema: 'public'
+      }
+    });
     
     // Fetch both panel metadata and the latest job status
     const [metadataResult, jobsResult] = await Promise.all([
@@ -82,7 +86,12 @@ serve(async (req) => {
     console.error("Error fetching panel metadata:", error);
     
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message,
+        // Include more detailed error information for debugging
+        errorDetails: typeof error === 'object' ? JSON.stringify(error) : 'Unknown error'
+      }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

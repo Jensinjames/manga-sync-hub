@@ -39,22 +39,27 @@ export async function storePrediction(
       throw predError;
     }
 
-    // Insert any annotations if available
+    // Check if we have valid annotations before proceeding
     if (prediction.annotations && prediction.annotations.length > 0) {
-      const annotationsToInsert = prediction.annotations.map((ann) => ({
-        prediction_id: predictionRow.id,
-        label: ann.label,
-        confidence: ann.confidence ?? null,
-        bbox: ann.bbox ?? null
-      }));
+      try {
+        const annotationsToInsert = prediction.annotations.map((ann) => ({
+          prediction_id: predictionRow.id,
+          label: ann.label || 'unknown',
+          confidence: ann.confidence ?? null,
+          bbox: ann.bbox ?? null
+        }));
 
-      const { error: annError } = await supabase
-        .from('annotations')
-        .insert(annotationsToInsert);
+        const { error: annError } = await supabase
+          .from('annotations')
+          .insert(annotationsToInsert);
 
-      if (annError) {
-        console.error("Failed to store annotations:", annError);
-        throw annError;
+        if (annError) {
+          console.error("Failed to store annotations:", annError);
+          // Don't throw here, we still want to return the prediction data
+        }
+      } catch (annInsertError) {
+        console.error("Error formatting annotation data:", annInsertError);
+        // Continue despite annotation errors
       }
     }
 

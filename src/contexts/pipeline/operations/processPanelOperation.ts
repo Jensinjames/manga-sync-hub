@@ -22,9 +22,16 @@ export const processPanel = async (
   try {
     onProgress?.('Starting panel processing...');
     
+    // Check for broken panel data
+    if (!panel || !panel.imageUrl) {
+      throw new Error('Invalid panel data - missing image URL');
+    }
+    
     // Always try client-side processing first if preferred
     if (preferClientSide) {
       try {
+        console.log('Attempting client-side processing');
+        onProgress?.('Processing with client-side ML...');
         return await processClientSide(panel, { onProgress, onSuccess });
       } catch (clientError) {
         console.error('Client-side processing failed, falling back to edge function:', clientError);
@@ -34,8 +41,23 @@ export const processPanel = async (
     }
     
     // Process via edge function as fallback or if client-side not preferred
-    const updatedPanel = await processServerSide(panel, { onProgress, onSuccess });
-    return updatedPanel;
+    console.log('Attempting server-side processing');
+    onProgress?.('Processing with server-side ML...');
+    try {
+      const updatedPanel = await processServerSide(panel, { onProgress, onSuccess });
+      return updatedPanel;
+    } catch (serverError) {
+      console.error('Server-side processing failed, trying client again:', serverError);
+      
+      // If server-side also fails, try client-side one more time
+      onProgress?.('Server processing failed, trying client-side again...');
+      try {
+        return await processClientSide(panel, { onProgress, onSuccess });
+      } catch (finalError) {
+        console.error('All processing attempts failed:', finalError);
+        throw finalError;
+      }
+    }
   } catch (error) {
     console.error('Panel processing failed:', error);
     onError?.(error);
