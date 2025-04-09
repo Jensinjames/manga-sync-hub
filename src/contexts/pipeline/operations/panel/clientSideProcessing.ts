@@ -57,14 +57,17 @@ export const processClientSide = async (
         // Convert the normalized prediction to our app's format
         const normalizedResult = MangaVisionTransformer.normalizePrediction(fallbackResult);
         updatedPanel.labels = MangaVisionTransformer.toLabels(normalizedResult.annotations);
+        updatedPanel.debugOverlay = updatedPanel.labels;
       } else {
         const normalizedResult = MangaVisionTransformer.normalizePrediction(retryResult);
         updatedPanel.labels = MangaVisionTransformer.toLabels(normalizedResult.annotations);
+        updatedPanel.debugOverlay = updatedPanel.labels;
       }
     } else {
       // Normal case - got results on the first try
       const normalizedResult = MangaVisionTransformer.normalizePrediction(result);
       updatedPanel.labels = MangaVisionTransformer.toLabels(normalizedResult.annotations);
+      updatedPanel.debugOverlay = updatedPanel.labels;
     }
     
     // Add metadata fields for the processedPanel

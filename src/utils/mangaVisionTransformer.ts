@@ -40,7 +40,7 @@ export class MangaVisionTransformer {
     const normalizedAnnotations: MangaVisionAnnotation[] = result.annotations.map(annotation => ({
       ...annotation,
       confidence: annotation.confidence ?? 0, // Ensure confidence is always present
-      bbox: annotation.bbox || [0, 0, 0, 0],
+      bbox: annotation.bbox || [0, 0, 0, 0] as [number, number, number, number],
       label: annotation.label || 'unknown'
     }));
 

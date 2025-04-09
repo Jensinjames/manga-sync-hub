@@ -12,7 +12,9 @@ export const useImageProcessor = () => {
     setSelectedPanels, 
     debugMode, 
     setDebugMode,
-    processPanel: processPanelFromContext
+    processPanel: processPanelFromContext,
+    useClientSideProcessing,
+    setUseClientSideProcessing
   } = usePipeline();
   
   const [processingAll, setProcessingAll] = useState(false);
@@ -43,9 +45,49 @@ export const useImageProcessor = () => {
       event.stopPropagation();
     }
     
+    // Force client-side processing based on user preference
+    if (useClientSideProcessing && !panel.forceClientProcessing) {
+      setSelectedPanels(prev => prev.map(p => {
+        if (p.id === panel.id) {
+          return {
+            ...p,
+            forceClientProcessing: true
+          };
+        }
+        return p;
+      }));
+    }
+    
     await ensureResourcesLoaded();
-    await processPanelFromContext(panel.id);
-    updateElementVisibility();
+    try {
+      await processPanelFromContext(panel.id);
+      updateElementVisibility();
+      toast.success('Panel processed successfully');
+    } catch (error) {
+      console.error('Failed to process panel:', error);
+      toast.error('Failed to process panel. Trying client-side fallback...');
+      
+      // Update panel to force client-side processing next time
+      setSelectedPanels(prev => prev.map(p => {
+        if (p.id === panel.id) {
+          return {
+            ...p,
+            forceClientProcessing: true
+          };
+        }
+        return p;
+      }));
+      
+      // Retry with explicit client-side flag
+      try {
+        await processPanelFromContext(panel.id);
+        updateElementVisibility();
+        toast.success('Panel processed with client-side fallback');
+      } catch (secondError) {
+        console.error('Client-side fallback also failed:', secondError);
+        toast.error('All processing attempts failed');
+      }
+    }
   };
 
   const handleProcessAll = async () => {
@@ -77,6 +119,24 @@ export const useImageProcessor = () => {
         successCount++;
       } catch (err) {
         console.error(`Failed to process panel ${panel.id}:`, err);
+        
+        // Try with client-side processing explicitly
+        try {
+          setSelectedPanels(prev => prev.map(p => {
+            if (p.id === panel.id) {
+              return {
+                ...p,
+                forceClientProcessing: true
+              };
+            }
+            return p;
+          }));
+          
+          await processPanelFromContext(panel.id);
+          successCount++;
+        } catch (clientErr) {
+          console.error(`Client-side fallback failed for panel ${panel.id}:`, clientErr);
+        }
       }
       setProgress(Math.round(((i + 1) / selectedPanels.length) * 100));
     }
@@ -115,6 +175,8 @@ export const useImageProcessor = () => {
     progress,
     containerRef,
     debugMode,
+    useClientSideProcessing,
+    setUseClientSideProcessing,
     handleProcessSingle,
     handleProcessAll,
     handlePanelClick,

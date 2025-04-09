@@ -4,6 +4,7 @@ import { ProcessorHeader } from './processor/ProcessorHeader';
 import { ProcessingProgress } from './processor/ProcessingProgress';
 import { PanelGrid } from './processor/PanelGrid';
 import { useImageProcessor } from './processor/useImageProcessor';
+import { toast } from 'sonner';
 
 export const ImageProcessor: React.FC = () => {
   const {
@@ -42,5 +43,3 @@ export const ImageProcessor: React.FC = () => {
     </div>
   );
 };
-
-import { supabase } from '@/integrations/supabase/client';
