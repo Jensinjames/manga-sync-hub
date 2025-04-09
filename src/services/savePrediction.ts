@@ -21,9 +21,9 @@ export async function storePrediction(
   prediction: PredictionResult
 ) {
   try {
-    // Insert the prediction record
-    const { data: predictionRow, error: predError } = await supabase
-      .from('predictions')
+    // Insert the prediction record using type assertion
+    const { data: predictionRow, error: predError } = await (supabase
+      .from('predictions') as any)
       .insert({
         image_url: imageUrl,
         model_name: modelConfig.model_name,
@@ -40,7 +40,7 @@ export async function storePrediction(
     }
 
     // Check if we have valid annotations before proceeding
-    if (prediction.annotations && prediction.annotations.length > 0) {
+    if (prediction.annotations && prediction.annotations.length > 0 && predictionRow) {
       try {
         const annotationsToInsert = prediction.annotations.map((ann) => ({
           prediction_id: predictionRow.id,
@@ -49,8 +49,8 @@ export async function storePrediction(
           bbox: ann.bbox ?? null
         }));
 
-        const { error: annError } = await supabase
-          .from('annotations')
+        const { error: annError } = await (supabase
+          .from('annotations') as any)
           .insert(annotationsToInsert);
 
         if (annError) {
