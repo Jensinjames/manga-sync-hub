@@ -1,9 +1,8 @@
-
 import { PipelinePanel, NarrationType, NarrationFormat, VoiceType } from './types';
 import { processPanel } from './operations/processPanelOperation';
 import { generateNarration, updatePanelNarration } from './operations/narrationOperations';
 import { generateAudio } from './operations/audioOperations';
-import { MangaVisionClient, DEFAULT_CONFIG } from '@/utils/mangaVisionClient';
+import { MangaVisionClient, DEFAULT_CONFIG } from '@/utils/mangaVision';
 import { MangaModelClient } from '@/utils/manga/MangaModelClient';
 import { toast } from 'sonner';
 
