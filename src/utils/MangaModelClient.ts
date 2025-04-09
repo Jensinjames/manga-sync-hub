@@ -12,6 +12,7 @@ export type Annotation = {
 
 export type PredictionResult = {
   image?: string;
+  image_id?: string;
   annotations: Annotation[];
 };
 
@@ -33,6 +34,8 @@ export class MangaModelClient {
   private readonly spaceName: string;
   private readonly options?: MangaModelClientOptions;
   private connectionPromise: Promise<any> | null = null;
+  private static instance: MangaModelClient | null = null;
+  private modelLoaded: boolean = false;
 
   constructor(
     spaceName: string = "Jensin/manga109_yolo",
@@ -40,6 +43,42 @@ export class MangaModelClient {
   ) {
     this.spaceName = spaceName;
     this.options = options;
+  }
+
+  /**
+   * Get singleton instance of MangaModelClient
+   */
+  public static getInstance(
+    spaceName: string = "Jensin/manga109_yolo",
+    options?: MangaModelClientOptions
+  ): MangaModelClient {
+    if (!MangaModelClient.instance) {
+      MangaModelClient.instance = new MangaModelClient(spaceName, options);
+    }
+    return MangaModelClient.instance;
+  }
+
+  /**
+   * Check if model is loaded, and load it if not
+   */
+  public async ensureModelLoaded(onProgress?: () => void): Promise<void> {
+    if (!this.modelLoaded) {
+      await this.connect();
+      this.modelLoaded = true;
+      if (onProgress) onProgress();
+    }
+  }
+
+  /**
+   * Detect objects in an image
+   */
+  public async detectObjects(imageUrl: string): Promise<PredictionResult> {
+    try {
+      return await this.predict(imageUrl);
+    } catch (error) {
+      console.error("Error detecting objects:", error);
+      throw error;
+    }
   }
 
   async connect(): Promise<any> {
@@ -116,26 +155,31 @@ export class MangaModelClient {
         // Format: { data: [ { annotations: [...] } ] }
         if (result.data[0] && result.data[0].annotations) {
           return {
-            annotations: result.data[0].annotations || []
+            annotations: result.data[0].annotations || [],
+            image_id: result.image_id || 'unknown'
           };
         }
         
         // Format: { data: [...] } where data is an array of annotations
         return {
-          annotations: result.data || []
+          annotations: result.data || [],
+          image_id: result.image_id || 'unknown'
         };
       }
       
       // If it's already in the expected format
       if (result.annotations) {
-        return result;
+        return {
+          annotations: result.annotations,
+          image_id: result.image_id || 'unknown'
+        };
       }
       
       console.warn('Unexpected result format:', result);
-      return { annotations: [] };
+      return { annotations: [], image_id: 'unknown' };
     } catch (err) {
       console.error('Error parsing result:', err);
-      return { annotations: [] };
+      return { annotations: [], image_id: 'unknown' };
     }
   }
 

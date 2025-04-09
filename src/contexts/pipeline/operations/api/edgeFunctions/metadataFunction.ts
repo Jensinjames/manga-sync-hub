@@ -16,7 +16,7 @@ export const getPanelMetadata = async (
       
       // Add timeout to the request
       const timeoutMs = 15000;
-      const timeout = new Promise((_, reject) => 
+      const timeout = new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs)
       );
       
@@ -28,21 +28,21 @@ export const getPanelMetadata = async (
       // Use Promise.race to implement timeout
       const response = await Promise.race([functionPromise, timeout]);
       
-      // Safely extract data and error with type checking
-      const { data, error } = response || { data: null, error: new Error('Empty response') };
+      // Type assertion to ensure TypeScript knows response has data and error properties
+      const typedResponse = response as { data: any, error: any };
       
-      if (error) {
-        console.error(`Error fetching metadata: ${error.message || JSON.stringify(error)}`);
-        throw error;
+      if (typedResponse.error) {
+        console.error(`Error fetching metadata: ${typedResponse.error.message || JSON.stringify(typedResponse.error)}`);
+        throw typedResponse.error;
       }
       
-      if (!data) {
+      if (!typedResponse.data) {
         console.error('No data returned from edge function');
         throw new Error('Invalid response from edge function');
       }
       
-      console.log('Metadata fetch successful:', data);
-      return data;
+      console.log('Metadata fetch successful:', typedResponse.data);
+      return typedResponse.data;
     } catch (err) {
       console.error(`Attempt ${attempt + 1} failed:`, err);
       

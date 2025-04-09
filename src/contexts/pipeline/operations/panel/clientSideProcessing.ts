@@ -20,7 +20,7 @@ export const processClientSide = async (
   
   try {
     // Initialize the ML model client
-    const client = await MangaModelClient.getInstance();
+    const client = MangaModelClient.getInstance();
     
     // Show progress for model loading
     onProgress?.('Loading machine learning model...');
@@ -50,7 +50,7 @@ export const processClientSide = async (
           annotations: [{
             label: 'panel',
             confidence: 0.8,
-            bbox: [0, 0, 100, 100]
+            bbox: [0, 0, 0, 0] as [number, number, number, number]
           }]
         };
         
