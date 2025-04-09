@@ -1,9 +1,10 @@
+
 import { PipelinePanel, NarrationType, NarrationFormat, VoiceType } from './types';
 import { processPanel } from './operations/processPanelOperation';
 import { generateNarration, updatePanelNarration } from './operations/narrationOperations';
 import { generateAudio } from './operations/audioOperations';
 import { MangaVisionClient, DEFAULT_CONFIG } from '@/utils/mangaVisionClient';
-import { MangaModelClient } from '@/utils/MangaModelClient';
+import { MangaModelClient } from '@/utils/manga/MangaModelClient';
 import { toast } from 'sonner';
 
 // Export the Hugging Face endpoints configuration with timeout settings

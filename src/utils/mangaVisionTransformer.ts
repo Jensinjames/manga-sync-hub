@@ -1,6 +1,5 @@
-
 import { PanelLabel } from '@/contexts/pipeline/types';
-import { Annotation, PredictionResult } from './MangaModelClient';
+import { Annotation, PredictionResult } from './manga/types';
 
 export interface MangaVisionAnnotation extends Annotation {
   confidence: number; // Make confidence required

@@ -1,6 +1,6 @@
-
 import { PanelLabel } from "@/contexts/pipeline/types";
-import { MangaModelClient, PredictionResult, Annotation } from "./MangaModelClient";
+import { MangaModelClient } from "./manga/MangaModelClient";
+import { PredictionResult, Annotation } from "./manga/types";
 
 export type MangaVisionAnnotation = {
   label: string;

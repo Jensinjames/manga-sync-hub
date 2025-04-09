@@ -1,6 +1,6 @@
 
 import { PipelinePanel } from '../../types';
-import { MangaModelClient } from '@/utils/MangaModelClient';
+import { MangaModelClient } from '@/utils/manga/MangaModelClient';
 import { MangaVisionTransformer } from '@/utils/mangaVisionTransformer';
 import { sleep } from '../utils/panelProcessingUtils';
 import { toast } from 'sonner';
