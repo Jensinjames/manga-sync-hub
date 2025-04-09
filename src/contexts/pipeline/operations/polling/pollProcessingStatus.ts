@@ -33,10 +33,15 @@ export const pollProcessingStatus = async (
       // Add fallback mechanism if API calls fail
       try {
         // Get both panel metadata and job status
-        const [metadataResponse, jobsResponse] = await Promise.all([
-          getPanelMetadata(panelId),
-          getPanelJobs(panelId)
-        ]);
+        const metadataResponse = await getPanelMetadata(panelId);
+        let jobsResponse = [];
+        
+        try {
+          jobsResponse = await getPanelJobs(panelId);
+        } catch (jobsError) {
+          console.error("Error fetching jobs:", jobsError);
+          // Continue with metadata only
+        }
         
         if (!metadataResponse || 
             !metadataResponse.data || 

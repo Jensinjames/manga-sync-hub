@@ -30,19 +30,19 @@ serve(async (req) => {
       throw new Error('Missing Supabase environment variables');
     }
     
-    // Create Supabase client - no schema specification needed as we'll use table methods
+    // Create Supabase client with schema specification
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // Fetch both panel metadata and the latest job status with explicit schema mention
     const [metadataResult, jobsResult] = await Promise.all([
-      // Get panel metadata
+      // Get panel metadata from public schema
       supabase
         .from('panel_metadata')
         .select('*')
         .eq('panel_id', panelId)
         .maybeSingle(),
       
-      // Get latest job for this panel
+      // Get latest job for this panel from public schema
       supabase
         .from('panel_jobs')
         .select('*')
